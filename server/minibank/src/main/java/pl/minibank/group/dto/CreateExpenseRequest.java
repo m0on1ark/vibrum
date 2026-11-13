@@ -16,6 +16,17 @@ public record CreateExpenseRequest(
         @Size(min = 3, max = 3) String currency,
         @NotNull LocalDate expenseDate,
         @NotNull SplitMode splitMode,
+        Long paidByUserId,
         List<SplitEntryRequest> splits
 ) {
+    public CreateExpenseRequest(
+            String title,
+            BigDecimal amount,
+            String currency,
+            LocalDate expenseDate,
+            SplitMode splitMode,
+            List<SplitEntryRequest> splits
+    ) {
+        this(title, amount, currency, expenseDate, splitMode, null, splits);
+    }
 }

@@ -10,7 +10,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.minibank.TestcontainersConfiguration;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -131,7 +130,7 @@ class GroupControllerTests {
     }
 
     @Test
-    void nonMemberCannotAccessGroup() throws Exception {
+    void nonMemberReceivesNotFound() throws Exception {
         String aliceToken = register(uniqueEmail("alice"), "password123", "Alice");
         String strangerToken = register(uniqueEmail("stranger"), "password123", "Stranger");
 
@@ -146,15 +145,171 @@ class GroupControllerTests {
 
         Integer groupId = JsonPath.read(groupResponse, "$.id");
 
-        // Stranger tries to get details -> 403 Forbidden
+        // Stranger tries to get details -> 404 Not Found (standardized)
         mockMvc.perform(get("/api/groups/" + groupId)
                         .header("Authorization", "Bearer " + strangerToken))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
 
-        // Stranger tries to get balances -> 403 Forbidden
+        // Stranger tries to get balances -> 404 Not Found
         mockMvc.perform(get("/api/groups/" + groupId + "/balances")
                         .header("Authorization", "Bearer " + strangerToken))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void cannotRemoveMemberWithUnsettledBalance() throws Exception {
+        String aliceEmail = uniqueEmail("alice");
+        String aliceToken = register(aliceEmail, "password123", "Alice");
+
+        String bobEmail = uniqueEmail("bob");
+        String bobToken = register(bobEmail, "password123", "Bob");
+
+        String charlieEmail = uniqueEmail("charlie");
+        register(charlieEmail, "password123", "Charlie");
+
+        // Alice creates group and adds Bob and Charlie
+        String groupRes = mockMvc.perform(post("/api/groups")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Flatmates"}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        Long groupId = ((Integer) JsonPath.read(groupRes, "$.id")).longValue();
+
+        mockMvc.perform(post("/api/groups/" + groupId + "/members")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "%s"}
+                                """.formatted(bobEmail)))
+                .andExpect(status().isCreated());
+
+        String charlieRes = mockMvc.perform(post("/api/groups/" + groupId + "/members")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "%s"}
+                                """.formatted(charlieEmail)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        Long charlieId = ((Integer) JsonPath.read(charlieRes, "$.userId")).longValue();
+
+        // Alice pays 90 split equally among Alice, Bob, Charlie (each owes 30)
+        mockMvc.perform(post("/api/groups/" + groupId + "/expenses")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "title": "Utilities",
+                                    "amount": 90.00,
+                                    "currency": "PLN",
+                                    "expenseDate": "%s",
+                                    "splitMode": "EQUAL",
+                                    "splits": []
+                                }
+                                """.formatted(LocalDate.now())))
+                .andExpect(status().isCreated());
+
+        // Alice tries to remove Charlie who owes 30 -> 409 Conflict
+        mockMvc.perform(delete("/api/groups/" + groupId + "/members/" + charlieId)
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Member has unsettled balance"));
+
+        // Add a fourth member David with no expenses
+        String davidEmail = uniqueEmail("david");
+        register(davidEmail, "password123", "David");
+
+        String davidRes = mockMvc.perform(post("/api/groups/" + groupId + "/members")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "%s"}
+                                """.formatted(davidEmail)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        Long davidId = ((Integer) JsonPath.read(davidRes, "$.userId")).longValue();
+
+        // Alice removes David with 0 balance -> 204 No Content
+        mockMvc.perform(delete("/api/groups/" + groupId + "/members/" + davidId)
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void percentAndFixedSplitModesWithCustomPayer() throws Exception {
+        String aliceEmail = uniqueEmail("alice");
+        String aliceToken = register(aliceEmail, "password123", "Alice");
+
+        String bobEmail = uniqueEmail("bob");
+        String bobToken = register(bobEmail, "password123", "Bob");
+
+        String groupRes = mockMvc.perform(post("/api/groups")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Project Expenses"}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        Long groupId = ((Integer) JsonPath.read(groupRes, "$.id")).longValue();
+        Long aliceId = ((Integer) JsonPath.read(groupRes, "$.createdById")).longValue();
+
+        String bobRes = mockMvc.perform(post("/api/groups/" + groupId + "/members")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "%s"}
+                                """.formatted(bobEmail)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        Long bobId = ((Integer) JsonPath.read(bobRes, "$.userId")).longValue();
+
+        // 1. PERCENT split: 100 PLN (Alice 70%, Bob 30%), paidBy Bob
+        mockMvc.perform(post("/api/groups/" + groupId + "/expenses")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "title": "Design software",
+                                    "amount": 100.00,
+                                    "currency": "PLN",
+                                    "expenseDate": "%s",
+                                    "splitMode": "PERCENT",
+                                    "paidByUserId": %d,
+                                    "splits": [
+                                        {"userId": %d, "percent": 70.0},
+                                        {"userId": %d, "percent": 30.0}
+                                    ]
+                                }
+                                """.formatted(LocalDate.now(), bobId, aliceId, bobId)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.paidById").value(bobId))
+                .andExpect(jsonPath("$.splits[0].shareAmount").value(70.00))
+                .andExpect(jsonPath("$.splits[1].shareAmount").value(30.00));
+
+        // 2. Non-PLN currency should be rejected with 400 Bad Request
+        mockMvc.perform(post("/api/groups/" + groupId + "/expenses")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "title": "US Hosting",
+                                    "amount": 50.00,
+                                    "currency": "USD",
+                                    "expenseDate": "%s",
+                                    "splitMode": "EQUAL"
+                                }
+                                """.formatted(LocalDate.now())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Only PLN currency is currently supported"));
     }
 
     private String register(String email, String password, String displayName) throws Exception {

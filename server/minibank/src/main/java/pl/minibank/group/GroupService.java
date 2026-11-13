@@ -3,6 +3,7 @@ package pl.minibank.group;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.minibank.common.exception.BadRequestException;
 import pl.minibank.common.exception.ConflictException;
 import pl.minibank.common.exception.ForbiddenException;
 import pl.minibank.common.exception.NotFoundException;
@@ -110,6 +111,18 @@ public class GroupService {
             throw new NotFoundException("Member not found in this group");
         }
 
+        // Check unsettled balance for target member
+        List<BalanceResponse> balances = getBalances(groupId, currentUserId);
+        BigDecimal targetBalance = balances.stream()
+                .filter(b -> b.userId().equals(targetUserId))
+                .map(BalanceResponse::netBalance)
+                .findFirst()
+                .orElse(BigDecimal.ZERO);
+
+        if (targetBalance.compareTo(BigDecimal.ZERO) != 0) {
+            throw new ConflictException("Member has unsettled balance");
+        }
+
         memberRepository.deleteById(memberId);
     }
 
@@ -118,15 +131,26 @@ public class GroupService {
         ensureMembership(groupId, currentUserId);
         ExpenseGroup group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new NotFoundException("Expense group not found with id: " + groupId));
-        User payer = getUserOrThrow(currentUserId);
 
         List<GroupMember> members = memberRepository.findAllByGroupIdWithUser(groupId);
         Map<Long, User> memberUsers = members.stream()
                 .collect(Collectors.toMap(m -> m.getUser().getId(), GroupMember::getUser));
 
+        // Determine payer: explicit paidByUserId or default to current user
+        Long payerId = request.paidByUserId() != null ? request.paidByUserId() : currentUserId;
+        if (!memberUsers.containsKey(payerId)) {
+            throw new InvalidSplitException("Payer is not a member of this group");
+        }
+        User payer = memberUsers.get(payerId);
+
+        // Currency validation: only PLN is currently supported
         String currency = (request.currency() != null && !request.currency().isBlank())
                 ? request.currency().trim().toUpperCase(Locale.ROOT)
                 : "PLN";
+
+        if (!"PLN".equals(currency)) {
+            throw new BadRequestException("Only PLN currency is currently supported");
+        }
 
         SharedExpense expense = new SharedExpense(
                 group,
@@ -216,7 +240,7 @@ public class GroupService {
 
     public void ensureMembership(Long groupId, Long userId) {
         if (!memberRepository.existsByGroupIdAndUserId(groupId, userId)) {
-            throw new ForbiddenException("User is not a member of group " + groupId);
+            throw new NotFoundException("Expense group not found with id: " + groupId);
         }
     }
 
