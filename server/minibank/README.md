@@ -7,14 +7,14 @@ Spring Boot 4 · Java 21 · PostgreSQL 17 · Hibernate (JPA) · Flyway · Spring
 Wszystko w Dockerze (baza + backend):
 
 ```bash
-cd Docker
+cd docker
 docker compose up --build
 ```
 
 Tylko baza w Dockerze, backend z IDE / Mavena:
 
 ```bash
-cd Docker && docker compose up -d postgres
+cd docker && docker compose up -d postgres
 cd ../server/minibank && ./mvnw spring-boot:run
 ```
 
