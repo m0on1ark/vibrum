@@ -143,8 +143,8 @@ class SettlementCalculatorTest {
             net.put(ub.userId(), ub.balance());
         }
         for (var t : transfers) {
-            net.merge(t.fromUserId(), t.amount().negate(), BigDecimal::add);
-            net.merge(t.toUserId(), t.amount(), BigDecimal::add);
+            net.merge(t.fromUserId(), t.amount(), BigDecimal::add);
+            net.merge(t.toUserId(), t.amount().negate(), BigDecimal::add);
         }
         for (var entry : net.entrySet()) {
             assertThat(entry.getValue())
