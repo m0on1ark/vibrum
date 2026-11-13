@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
@@ -18,9 +19,11 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { APP_PATHS } from "@/constants";
 import { signUpSchema, type SignUpInput } from "@/lib/auth-schema";
 
 export function SignUpForm() {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
@@ -32,9 +35,14 @@ export function SignUpForm() {
     setError(null);
     try {
       const result = await signUpAction(values);
-      if (result?.error) setError(result.error);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.replace(APP_PATHS.home);
+      router.refresh();
     } catch {
-      setError("Nie udało się połączyć z serwerem. Spróbuj ponownie.");
+      setError("Could not reach the server. Please try again.");
     }
   }
 
@@ -146,7 +154,7 @@ export function SignUpForm() {
       <p className="text-sm text-muted-foreground">
         Masz już konto?{" "}
         <Link
-          href="/auth/sign-in"
+          href={APP_PATHS.signIn}
           className="font-medium text-primary underline underline-offset-4 hover:no-underline"
         >
           Zaloguj się

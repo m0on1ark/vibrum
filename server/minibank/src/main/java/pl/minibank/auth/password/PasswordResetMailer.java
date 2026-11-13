@@ -40,9 +40,9 @@ public class PasswordResetMailer {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(from);
         message.setTo(email);
-        message.setSubject("miniBank: password reset");
+        message.setSubject("Vibrum: password reset");
         message.setText("""
-                To reset your miniBank password, open the link below. It expires in 30 minutes.
+                To reset your Vibrum password, open the link below. It expires in 30 minutes.
 
                 %s
 

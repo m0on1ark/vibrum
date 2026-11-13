@@ -1,15 +1,17 @@
-import { env } from "@/configs";
 import { headers } from "next/headers";
+
+import { apiUrl } from "@/constants/api-paths";
 
 import { readApiError } from "./api-error";
 import type { AuthTokenResponse } from "./auth-schema";
-import { setAccessToken } from "./server-auth";
+import { readRefreshCookie } from "./refresh-session";
+import { setSessionCookies } from "./server-auth";
 
 export async function requestAuthToken(path: string, body: unknown) {
   const headerStore = await headers();
   const userAgent = headerStore.get("user-agent") ?? "Unknown";
 
-  const response = await fetch(`${env.NEXT_PUBLIC_API_URL}${path}`, {
+  const response = await fetch(apiUrl(path), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -24,6 +26,10 @@ export async function requestAuthToken(path: string, body: unknown) {
   }
 
   const data = (await response.json()) as AuthTokenResponse;
-  await setAccessToken(data.accessToken, data.expiresIn);
+  await setSessionCookies({
+    accessToken: data.accessToken,
+    expiresIn: data.expiresIn,
+    refresh: readRefreshCookie(response),
+  });
   return { error: null };
 }

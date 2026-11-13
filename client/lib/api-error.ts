@@ -3,7 +3,7 @@ type ProblemDetail = {
   errors?: Record<string, string>;
 };
 
-const FALLBACK_MESSAGE = "Coś poszło nie tak. Spróbuj ponownie.";
+const FALLBACK_MESSAGE = "Request failed";
 
 export async function readApiError(response: Response) {
   try {

@@ -1,5 +1,6 @@
 "use server";
 
+import { API_PATHS } from "@/constants/api-paths";
 import { requestAuthToken } from "@/lib/auth-request";
 import { signUpSchema, type SignUpInput } from "@/lib/auth-schema";
 
@@ -9,5 +10,5 @@ export async function signUpAction(input: SignUpInput) {
     return { error: "Invalid inputs" };
   }
 
-  return requestAuthToken("/api/auth/register", parsed.data);
+  return requestAuthToken(API_PATHS.auth.register, parsed.data);
 }

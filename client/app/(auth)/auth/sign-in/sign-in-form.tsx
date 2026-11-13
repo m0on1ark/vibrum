@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
@@ -17,9 +18,11 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { APP_PATHS } from "@/constants";
 import { signInSchema, type SignInInput } from "@/lib/auth-schema";
 
 export function SignInForm() {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const form = useForm<SignInInput>({
     resolver: zodResolver(signInSchema),
@@ -31,9 +34,14 @@ export function SignInForm() {
     setError(null);
     try {
       const result = await signInAction(values);
-      if (result?.error) setError(result.error);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.replace(APP_PATHS.home);
+      router.refresh();
     } catch {
-      setError("Nie udało się połączyć z serwerem. Spróbuj ponownie.");
+      setError("Could not reach the server. Please try again.");
     }
   }
 
@@ -83,7 +91,15 @@ export function SignInForm() {
             control={form.control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="sign-in-password">Hasło</FieldLabel>
+                <div className="flex items-center justify-between gap-2">
+                  <FieldLabel htmlFor="sign-in-password">Hasło</FieldLabel>
+                  <Link
+                    href={APP_PATHS.forgotPassword}
+                    className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                  >
+                    Nie pamiętasz hasła?
+                  </Link>
+                </div>
                 <PasswordInput
                   {...field}
                   id="sign-in-password"
@@ -118,7 +134,7 @@ export function SignInForm() {
       <p className="text-sm text-muted-foreground">
         Nie masz jeszcze konta?{" "}
         <Link
-          href="/auth/sign-up"
+          href={APP_PATHS.signUp}
           className="font-medium text-primary underline underline-offset-4 hover:no-underline"
         >
           Załóż konto

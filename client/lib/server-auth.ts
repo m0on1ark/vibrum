@@ -1,29 +1,39 @@
-"use server";
-
-import { isProduction } from "@/configs";
 import { cookies } from "next/headers";
 
-const ACCESS_TOKEN = "accessToken";
-const REFRESH_TOKEN = "refreshToken";
+import {
+  ACCESS_TOKEN_COOKIE,
+  accessTokenMaxAge,
+  DEFAULT_REFRESH_MAX_AGE,
+  REFRESH_TOKEN_COOKIE,
+  sessionCookieOptions,
+} from "./auth-cookies";
+import type { Session } from "./refresh-session";
 
-export async function setAccessToken(accessToken: string, expiresIn: number) {
+export async function setSessionCookies(session: Session) {
   const cookieStore = await cookies();
-  cookieStore.set(ACCESS_TOKEN, accessToken, {
-    httpOnly: true,
-    path: "/",
-    secure: isProduction,
-    sameSite: "lax",
-    maxAge: expiresIn,
-  });
+
+  cookieStore.set(
+    ACCESS_TOKEN_COOKIE,
+    session.accessToken,
+    sessionCookieOptions(accessTokenMaxAge(session.expiresIn)),
+  );
+
+  if (session.refresh) {
+    cookieStore.set(
+      REFRESH_TOKEN_COOKIE,
+      session.refresh.value,
+      sessionCookieOptions(session.refresh.maxAge ?? DEFAULT_REFRESH_MAX_AGE),
+    );
+  }
 }
 
-export async function hasAccessToken() {
+export async function getRefreshToken() {
   const cookieStore = await cookies();
-  return cookieStore.has(ACCESS_TOKEN);
+  return cookieStore.get(REFRESH_TOKEN_COOKIE)?.value;
 }
 
 export async function clearAuthCookies() {
   const cookieStore = await cookies();
-  cookieStore.delete(ACCESS_TOKEN);
-  cookieStore.delete(REFRESH_TOKEN);
+  cookieStore.delete(ACCESS_TOKEN_COOKIE);
+  cookieStore.delete(REFRESH_TOKEN_COOKIE);
 }
