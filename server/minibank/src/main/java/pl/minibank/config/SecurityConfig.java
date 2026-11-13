@@ -8,9 +8,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
-/**
- * Stateless API security. JWT filter will be plugged in here by the auth module.
- */
 @Configuration
 public class SecurityConfig {
 

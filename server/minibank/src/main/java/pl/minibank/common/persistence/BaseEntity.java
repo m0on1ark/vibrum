@@ -11,10 +11,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 
-/**
- * Common base for all entities: BIGSERIAL id plus audit timestamps.
- * Tables of subclasses must have id, created_at and updated_at columns.
- */
 @Getter
 @MappedSuperclass
 public abstract class BaseEntity {

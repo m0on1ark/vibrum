@@ -9,9 +9,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Maps exceptions to RFC 9457 problem responses so the frontend gets one error format.
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
