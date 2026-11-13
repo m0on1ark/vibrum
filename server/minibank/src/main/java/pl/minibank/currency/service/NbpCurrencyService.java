@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
+import pl.minibank.common.exception.BadRequestException;
 import pl.minibank.currency.dto.NbpRateResponseDto;
 import pl.minibank.currency.entity.ExchangeRate;
 import pl.minibank.currency.repository.ExchangeRateRepository;
@@ -26,7 +27,8 @@ public class NbpCurrencyService {
 
         String cleanCurrency = currency.trim().toUpperCase();
 
-        for (int i = 0; i < 7; i++) {
+        // По требованиям NBP: курс берется за предыдущий рабочий день
+        for (int i = 1; i <= 7; i++) {
             LocalDate targetDate = date.minusDays(i);
 
             Optional<ExchangeRate> cachedRate = exchangeRateRepository
@@ -45,22 +47,20 @@ public class NbpCurrencyService {
                         .body(NbpRateResponseDto.class);
 
                 if (response != null && response.getRates() != null && !response.getRates().isEmpty()) {
-                    BigDecimal midRate = response.getRates().get(0).getMid();
+                    BigDecimal rate = response.getRates().get(0).getMid();
 
                     exchangeRateRepository.save(ExchangeRate.builder()
                             .currencyCode(cleanCurrency)
                             .rateDate(targetDate)
-                            .rate(midRate)
+                            .rate(rate)
                             .build());
 
-                    return midRate;
+                    return rate;
                 }
             } catch (HttpClientErrorException.NotFound e) {
-                // NBP does not publish rates on weekends/holidays (returns 404).
-                // Roll back to the previous day in the next loop iteration.
             }
         }
 
-        throw new IllegalStateException("Failed to fetch NBP exchange rate for " + cleanCurrency + " on " + date);
+        throw new BadRequestException("Failed to fetch NBP exchange rate for " + cleanCurrency + " around " + date);
     }
 }
