@@ -1,60 +1,60 @@
-# miniBank — backend
+# miniBank backend
 
-Spring Boot 4 · Java 21 · PostgreSQL 17 · Hibernate (JPA) · Flyway · Spring Security
+Spring Boot 4, Java 21, PostgreSQL 17, Hibernate (JPA), Flyway, Spring Security.
 
-## Uruchomienie
+## Running
 
-Wszystko w Dockerze (baza + backend):
+Database and backend in Docker:
 
 ```bash
 cd Docker
 docker compose up --build
 ```
 
-Tylko baza w Dockerze, backend z IDE / Mavena:
+Database in Docker, backend from IDE or Maven:
 
 ```bash
 cd Docker && docker compose up -d postgres
 cd ../server/minibank && ./mvnw spring-boot:run
 ```
 
-Sprawdzenie: http://localhost:8080/actuator/health
+Health check: http://localhost:8080/actuator/health
 
-Testy (wymagają działającego Dockera — Testcontainers stawia własnego Postgresa):
+Tests need Docker running (Testcontainers starts its own Postgres):
 
 ```bash
 ./mvnw test
 ```
 
-## Konfiguracja
+## Configuration
 
-Zmienne środowiskowe (domyślne wartości w `application.yml`):
+Environment variables (defaults in `application.yml`):
 
-| Zmienna       | Domyślnie                                   |
+| Variable      | Default                                     |
 |---------------|---------------------------------------------|
 | `DB_URL`      | `jdbc:postgresql://localhost:5432/minibank` |
 | `DB_USERNAME` | `minibank`                                  |
 | `DB_PASSWORD` | `minibank`                                  |
 | `SERVER_PORT` | `8080`                                      |
 
-## Baza danych
+## Database
 
-- Schemat zarządzany **wyłącznie przez Flyway**: `src/main/resources/db/migration`.
-- Hibernate działa w trybie `ddl-auto: validate` — encje muszą zgadzać się z migracjami.
-- Nowa zmiana schematu = nowy plik `V<n>__opis.sql`. Nigdy nie edytujemy już wypuszczonych migracji.
-- Encje dziedziczą po `BaseEntity` (`id`, `created_at`, `updated_at`).
+- Schema is managed only by Flyway migrations in `src/main/resources/db/migration`.
+- Hibernate runs with `ddl-auto: validate`, so entities must match the migrations.
+- Every schema change is a new `V<n>__description.sql` file. Don't edit migrations that are already merged.
+- Entities extend `BaseEntity` (`id`, `created_at`, `updated_at`).
 
-## Struktura pakietów
+## Packages
 
-| Pakiet         | Zakres                                              | Rola |
-|----------------|-----------------------------------------------------|------|
-| `config`       | Konfiguracja Spring (security itp.)                 | —    |
-| `common`       | `BaseEntity`, obsługa wyjątków (ProblemDetail)      | —    |
-| `user`         | Encja `User`, repozytorium                          | 2    |
-| `auth`         | Rejestracja, logowanie, JWT                         | 2    |
-| `category`     | Kategorie, reguły, silnik kategoryzacji             | 2    |
-| `subscription` | Detekcja płatności cyklicznych                      | 2    |
-| `transaction`  | Konta, transakcje, parsery wyciągów, deduplikacja   | 1    |
-| `currency`     | Kursy NBP, cache, przeliczanie na PLN               | 1    |
-| `group`        | Rozliczenia grupowe, minimalizacja przelewów        | 3    |
-| `budget`       | Budżety, prognoza wydatków                          | 3    |
+| Package        | Scope                                            | Role |
+|----------------|--------------------------------------------------|------|
+| `config`       | Spring configuration (security etc.)             | -    |
+| `common`       | `BaseEntity`, exception handling                 | -    |
+| `user`         | `User` entity and repository                     | 2    |
+| `auth`         | Registration, login, JWT                         | 2    |
+| `category`     | Categories, rules, categorization engine         | 2    |
+| `subscription` | Recurring payment detection                      | 2    |
+| `transaction`  | Accounts, transactions, statement parsers        | 1    |
+| `currency`     | NBP exchange rates, cache, conversion to PLN     | 1    |
+| `group`        | Group expenses, settlement optimization          | 3    |
+| `budget`       | Budgets, spending forecast                       | 3    |
