@@ -24,6 +24,7 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-minibank}
       DB_USERNAME: ${DB_USERNAME:-minibank}
       DB_PASSWORD: ${DB_PASSWORD:-minibank}
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-me-0123456789abcdef}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:
