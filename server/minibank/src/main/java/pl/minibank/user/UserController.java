@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import pl.minibank.auth.password.PasswordService;
-import pl.minibank.common.exception.NotFoundException;
 import pl.minibank.user.dto.ChangePasswordRequest;
 import pl.minibank.user.dto.UserResponse;
 
@@ -21,14 +20,12 @@ import pl.minibank.user.dto.UserResponse;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final PasswordService passwordService;
 
     @GetMapping("/me")
     public UserResponse me(@AuthenticationPrincipal Jwt jwt) {
-        return userRepository.findById(Long.valueOf(jwt.getSubject()))
-                .map(UserResponse::from)
-                .orElseThrow(() -> new NotFoundException("User not found"));
+        return userService.getCurrentUser(Long.valueOf(jwt.getSubject()));
     }
 
     @PostMapping("/me/password")
