@@ -12,6 +12,7 @@ import pl.minibank.category.CategoryRepository;
 import pl.minibank.common.exception.BadRequestException;
 import pl.minibank.common.exception.ConflictException;
 import pl.minibank.common.exception.NotFoundException;
+import pl.minibank.transaction.repository.TransactionRepository;
 import pl.minibank.user.User;
 import pl.minibank.user.UserRepository;
 
@@ -27,6 +28,7 @@ public class BudgetService {
     private final BudgetRepository budgetRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final TransactionRepository transactionRepository;
     private final BurnRateCalculator burnRateCalculator = new BurnRateCalculator();
 
     @Transactional
@@ -123,8 +125,11 @@ public class BudgetService {
     }
 
     private BigDecimal getSpentAmountForCategory(Long userId, Long categoryId, LocalDate month) {
-        // Ready for transaction aggregate query; defaults to 0 when transactions table is not present
-        return BigDecimal.ZERO;
+        LocalDate startOfMonth = month.withDayOfMonth(1);
+        LocalDate endOfMonth = month.withDayOfMonth(month.lengthOfMonth());
+        return transactionRepository.sumSpentByUserIdAndCategoryIdAndDateBetween(
+                userId, categoryId, startOfMonth, endOfMonth
+        );
     }
 
     private User getUserOrThrow(Long userId) {
