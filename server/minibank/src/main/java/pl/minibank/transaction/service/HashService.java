@@ -19,6 +19,9 @@ public class HashService {
                 dto.getCurrency().toUpperCase(),
                 dto.getTitle().trim().toLowerCase()
         );
+        if (dto.getReference() != null && !dto.getReference().isBlank()) {
+            rawData += "|" + dto.getReference().trim();
+        }
 
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

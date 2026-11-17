@@ -5,13 +5,13 @@ import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import org.springframework.stereotype.Component;
+import pl.minibank.common.exception.BadRequestException;
 import pl.minibank.transaction.dto.ParsedTransactionDto;
 import pl.minibank.transaction.entity.BankType;
 
 import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +31,7 @@ public class MBankCsvParser implements StatementParser {
         // Configure CSV parser to use semicolon instead of a comma
         CSVParser parser = new CSVParserBuilder().withSeparator(';').build();
 
-        try (CSVReader reader = new CSVReaderBuilder(new InputStreamReader(inputStream, StandardCharsets.UTF_8))
+        try (CSVReader reader = new CSVReaderBuilder(new StringReader(StatementText.read(inputStream)))
                 .withCSVParser(parser)
                 .build()) {
 
@@ -61,7 +61,7 @@ public class MBankCsvParser implements StatementParser {
                         .build());
             }
         } catch (Exception e) {
-            throw new IllegalArgumentException("Failed to parse mBank CSV statement: " + e.getMessage(), e);
+            throw new BadRequestException("Could not read the mBank statement file");
         }
 
         return transactions;
