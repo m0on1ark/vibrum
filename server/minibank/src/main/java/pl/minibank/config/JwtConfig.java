@@ -4,6 +4,8 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -24,10 +26,13 @@ public class JwtConfig {
 
     private final SecretKey key;
 
-    public JwtConfig(JwtProperties properties) {
+    public JwtConfig(JwtProperties properties, Environment environment) {
         byte[] secret = properties.secret().getBytes(StandardCharsets.UTF_8);
         if (secret.length < 32) {
             throw new IllegalStateException("app.jwt.secret must be at least 32 bytes");
+        }
+        if (environment.acceptsProfiles(Profiles.of("prod")) && properties.secret().contains("change-me")) {
+            throw new IllegalStateException("JWT_SECRET must be set to a real secret in the prod profile");
         }
         this.key = new SecretKeySpec(secret, "HmacSHA256");
     }

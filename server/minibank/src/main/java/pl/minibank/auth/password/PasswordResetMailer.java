@@ -8,6 +8,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
+import pl.minibank.auth.AuthProperties;
 
 @Slf4j
 @Component
@@ -16,13 +17,16 @@ public class PasswordResetMailer {
     private final ObjectProvider<JavaMailSender> mailSender;
     private final String publicUrl;
     private final String from;
+    private final long expirationMinutes;
 
     public PasswordResetMailer(ObjectProvider<JavaMailSender> mailSender,
+                               AuthProperties authProperties,
                                @Value("${app.public-url}") String publicUrl,
                                @Value("${app.mail.from}") String from) {
         this.mailSender = mailSender;
         this.publicUrl = publicUrl;
         this.from = from;
+        this.expirationMinutes = authProperties.passwordResetExpiration().toMinutes();
     }
 
     public void send(String email, String rawToken) {
@@ -42,12 +46,12 @@ public class PasswordResetMailer {
         message.setTo(email);
         message.setSubject("Vibrum: password reset");
         message.setText("""
-                To reset your Vibrum password, open the link below. It expires in 30 minutes.
+                To reset your Vibrum password, open the link below. It expires in %d minutes.
 
                 %s
 
                 If you did not request a password reset, ignore this email.
-                """.formatted(link));
+                """.formatted(expirationMinutes, link));
         try {
             sender.send(message);
         } catch (MailException e) {
