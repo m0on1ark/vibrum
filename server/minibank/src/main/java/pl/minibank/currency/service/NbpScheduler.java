@@ -14,12 +14,10 @@ public class NbpScheduler {
 
     private final NbpCurrencyService nbpCurrencyService;
 
-    // Запускается каждый день в 12:00
     @Scheduled(cron = "0 0 12 * * *")
     public void prefetchRates() {
         log.info("Starting scheduled NBP exchange rates prefetch...");
         try {
-            // Прогреваем кэш для основных валют на текущую дату
             nbpCurrencyService.getExchangeRateToPln("EUR", LocalDate.now());
             nbpCurrencyService.getExchangeRateToPln("USD", LocalDate.now());
             log.info("Successfully prefetched NBP exchange rates.");
