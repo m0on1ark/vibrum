@@ -7,15 +7,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import pl.minibank.category.CategorizationEngine;
+import pl.minibank.common.exception.NotFoundException;
 import pl.minibank.currency.service.NbpCurrencyService;
-import pl.minibank.transaction.dto.ImportResultDto;
-import pl.minibank.transaction.dto.ParsedTransactionDto;
+import pl.minibank.transaction.dto.*;
 import pl.minibank.transaction.entity.BankAccount;
-import pl.minibank.transaction.entity.BankType;
 import pl.minibank.transaction.entity.Transaction;
 import pl.minibank.transaction.parser.StatementParser;
 import pl.minibank.transaction.repository.BankAccountRepository;
 import pl.minibank.transaction.repository.TransactionRepository;
+import pl.minibank.user.User;
+import pl.minibank.user.UserRepository;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -29,25 +30,49 @@ public class TransactionService {
     private final List<StatementParser> parsers;
     private final BankAccountRepository bankAccountRepository;
     private final TransactionRepository transactionRepository;
+    private final UserRepository userRepository;
     private final HashService hashService;
     private final NbpCurrencyService nbpCurrencyService;
     private final CategorizationEngine categorizationEngine;
 
     @Transactional
-    public ImportResultDto importStatement(MultipartFile file, BankType bankType, Long accountId) throws IOException {
+    public BankAccountDto createAccount(Long userId, CreateBankAccountRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        BankAccount account = bankAccountRepository.save(BankAccount.builder()
+                .user(user)
+                .accountName(request.getAccountName())
+                .bankType(request.getBankType())
+                .baseCurrency(request.getBaseCurrency().toUpperCase())
+                .build());
+
+        return mapToAccountDto(account);
+    }
+
+    public List<BankAccountDto> getUserAccounts(Long userId) {
+        return bankAccountRepository.findAllByUserId(userId).stream()
+                .map(this::mapToAccountDto)
+                .toList();
+    }
+
+    @Transactional
+    public ImportResultDto importStatement(MultipartFile file, Long accountId, Long userId) throws IOException {
         BankAccount account = bankAccountRepository.findById(accountId)
-                .orElseThrow(() -> new IllegalArgumentException("Bank account not found: " + accountId));
+                .orElseThrow(() -> new NotFoundException("Bank account not found"));
+
+        if (!account.getUser().getId().equals(userId)) {
+            throw new NotFoundException("Bank account not found");
+        }
 
         StatementParser parser = parsers.stream()
-                .filter(p -> p.getSupportedBank() == bankType)
+                .filter(p -> p.getSupportedBank() == account.getBankType())
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Unsupported bank type: " + bankType));
+                .orElseThrow(() -> new NotFoundException("Unsupported bank type: " + account.getBankType()));
 
         List<ParsedTransactionDto> parsedTransactions = parser.parse(file.getInputStream());
-
         int importedCount = 0;
         int skippedCount = 0;
-        Long userId = account.getUser().getId();
 
         for (ParsedTransactionDto dto : parsedTransactions) {
             String hash = hashService.calculateHash(accountId, dto);
@@ -81,7 +106,31 @@ public class TransactionService {
         return new ImportResultDto(importedCount, skippedCount);
     }
 
-    public Page<Transaction> getTransactions(Pageable pageable) {
-        return transactionRepository.findAll(pageable);
+    public Page<TransactionDto> getUserTransactions(Long userId, Pageable pageable) {
+        return transactionRepository.findAllByBankAccountUserId(userId, pageable)
+                .map(this::mapToTransactionDto);
+    }
+
+    private BankAccountDto mapToAccountDto(BankAccount account) {
+        return BankAccountDto.builder()
+                .id(account.getId())
+                .accountName(account.getAccountName())
+                .bankType(account.getBankType())
+                .baseCurrency(account.getBaseCurrency())
+                .build();
+    }
+
+    private TransactionDto mapToTransactionDto(Transaction tx) {
+        return TransactionDto.builder()
+                .id(tx.getId())
+                .accountId(tx.getBankAccount().getId())
+                .date(tx.getTransactionDate())
+                .amount(tx.getOriginalAmount())
+                .currency(tx.getOriginalCurrency())
+                .amountInPln(tx.getAmountInPln())
+                .title(tx.getTitle())
+                .recipient(tx.getRecipient())
+                .categoryName(tx.getCategory() != null ? tx.getCategory().getName() : null)
+                .build();
     }
 }
