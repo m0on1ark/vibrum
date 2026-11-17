@@ -15,12 +15,16 @@ import pl.minibank.transaction.entity.Transaction;
 import pl.minibank.transaction.parser.StatementParser;
 import pl.minibank.transaction.repository.BankAccountRepository;
 import pl.minibank.transaction.repository.TransactionRepository;
+import pl.minibank.transaction.repository.TransactionSpecification;
 import pl.minibank.user.User;
 import pl.minibank.user.UserRepository;
+import org.springframework.data.jpa.domain.Specification;
+import pl.minibank.transaction.repository.TransactionSpecification;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -133,4 +137,25 @@ public class TransactionService {
                 .categoryName(tx.getCategory() != null ? tx.getCategory().getName() : null)
                 .build();
     }
+
+
+
+    public Page<TransactionDto> getUserTransactions(
+            Long userId, 
+            LocalDate startDate, 
+            LocalDate endDate, 
+            Long categoryId, 
+            Long accountId, 
+            Pageable pageable) {
+        
+        Specification<Transaction> spec = Specification.where(TransactionSpecification.belongsToUser(userId))
+                .and(TransactionSpecification.dateBetween(startDate, endDate))
+                .and(TransactionSpecification.hasCategory(categoryId))
+                .and(TransactionSpecification.belongsToAccount(accountId));
+
+        return transactionRepository.findAll(spec, pageable)
+                .map(this::mapToTransactionDto);
+    }
+
 }
+
