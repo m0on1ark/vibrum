@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.minibank.common.exception.ConflictException;
-import pl.minibank.common.exception.ForbiddenException;
 import pl.minibank.common.exception.NotFoundException;
 import pl.minibank.group.ExpenseGroup;
 import pl.minibank.group.ExpenseGroupRepository;
@@ -46,17 +45,24 @@ public class GroupInvitationService {
 
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         User invitedUser = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new NotFoundException("User not found with email: " + request.email()));
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
         if (memberRepository.existsByGroupIdAndUserId(groupId, invitedUser.getId())) {
             throw new ConflictException("User is already a member of this group");
         }
 
-        if (invitationRepository.existsByGroupIdAndInvitedUserIdAndStatus(groupId, invitedUser.getId(), GroupInvitationStatus.PENDING)) {
-            throw new ConflictException("An active invitation already exists for this user in this group");
-        }
+        Instant now = Instant.now();
+        invitationRepository.findByGroupIdAndInvitedUserIdAndStatus(groupId, invitedUser.getId(), GroupInvitationStatus.PENDING)
+                .ifPresent(existing -> {
+                    if (existing.isExpired(now)) {
+                        existing.expire(now);
+                        invitationRepository.saveAndFlush(existing);
+                    } else {
+                        throw new ConflictException("An active invitation already exists for this user in this group");
+                    }
+                });
 
-        Instant expiresAt = Instant.now().plus(DEFAULT_EXPIRATION);
+        Instant expiresAt = now.plus(DEFAULT_EXPIRATION);
         GroupInvitation invitation = new GroupInvitation(group, invitedUser, inviter, expiresAt);
         invitation = invitationRepository.save(invitation);
 
@@ -78,11 +84,14 @@ public class GroupInvitationService {
                 .orElseThrow(() -> new NotFoundException("Invitation not found with id: " + invitationId));
 
         if (!invitation.getInvitedUser().getId().equals(currentUserId)) {
-            throw new ForbiddenException("Only the invited user can accept this invitation");
+            throw new NotFoundException("Invitation not found with id: " + invitationId);
         }
 
         Instant now = Instant.now();
         if (invitation.getStatus() != GroupInvitationStatus.PENDING || invitation.isExpired(now)) {
+            if (invitation.getStatus() == GroupInvitationStatus.PENDING && invitation.isExpired(now)) {
+                invitation.expire(now);
+            }
             throw new ConflictException("Invitation is not pending or has expired");
         }
 
@@ -101,14 +110,18 @@ public class GroupInvitationService {
                 .orElseThrow(() -> new NotFoundException("Invitation not found with id: " + invitationId));
 
         if (!invitation.getInvitedUser().getId().equals(currentUserId)) {
-            throw new ForbiddenException("Only the invited user can decline this invitation");
+            throw new NotFoundException("Invitation not found with id: " + invitationId);
         }
 
-        if (invitation.getStatus() != GroupInvitationStatus.PENDING) {
-            throw new ConflictException("Invitation is not pending");
+        Instant now = Instant.now();
+        if (invitation.getStatus() != GroupInvitationStatus.PENDING || invitation.isExpired(now)) {
+            if (invitation.getStatus() == GroupInvitationStatus.PENDING && invitation.isExpired(now)) {
+                invitation.expire(now);
+            }
+            throw new ConflictException("Invitation is not pending or has expired");
         }
 
-        invitation.decline(Instant.now());
+        invitation.decline(now);
         return InvitationResponse.from(invitation);
     }
 }

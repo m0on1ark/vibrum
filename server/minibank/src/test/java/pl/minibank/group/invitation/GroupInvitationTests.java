@@ -34,6 +34,9 @@ class GroupInvitationTests {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private GroupInvitationRepository invitationRepository;
+
     @MockitoBean
     private JavaMailSender mailSender;
 
@@ -157,7 +160,7 @@ class GroupInvitationTests {
     }
 
     @Test
-    void acceptByAnotherUser_returnsForbidden403() throws Exception {
+    void acceptOrDeclineByAnotherUser_returnsNotFound404() throws Exception {
         String aliceToken = register(uniqueEmail("alice"), "password123", "Alice");
         Long groupId = createGroup(aliceToken, "Secret Society");
 
@@ -177,15 +180,61 @@ class GroupInvitationTests {
 
         String intruderToken = register(uniqueEmail("intruder"), "password123", "Intruder");
 
-        // Intruder tries to accept Eve's invitation -> 403 Forbidden
+        // Intruder tries to accept Eve's invitation -> 404 Not Found (neutral, does not leak existence)
         mockMvc.perform(post("/api/invitations/" + invitationId + "/accept")
                         .header("Authorization", "Bearer " + intruderToken))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
 
-        // Intruder tries to decline Eve's invitation -> 403 Forbidden
+        // Intruder tries to decline Eve's invitation -> 404 Not Found
         mockMvc.perform(post("/api/invitations/" + invitationId + "/decline")
                         .header("Authorization", "Bearer " + intruderToken))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void expiredInvitation_allowsReinviting() throws Exception {
+        String aliceToken = register(uniqueEmail("alice"), "password123", "Alice");
+        Long groupId = createGroup(aliceToken, "Trip to Alps");
+
+        String frankEmail = uniqueEmail("frank");
+        register(frankEmail, "password123", "Frank");
+
+        // 1. Alice invites Frank
+        String response = mockMvc.perform(post("/api/groups/" + groupId + "/invitations")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "%s"}
+                                """.formatted(frankEmail)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        Long firstInvitationId = ((Integer) JsonPath.read(response, "$.id")).longValue();
+
+        // 2. Set expires_at into the past
+        GroupInvitation firstInvitation = invitationRepository.findById(firstInvitationId).orElseThrow();
+        firstInvitation.setExpiresAt(java.time.Instant.now().minus(java.time.Duration.ofDays(1)));
+        invitationRepository.saveAndFlush(firstInvitation);
+
+        // 3. Alice invites Frank again -> succeeds with 201 Created
+        String secondResponse = mockMvc.perform(post("/api/groups/" + groupId + "/invitations")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "%s"}
+                                """.formatted(frankEmail)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        Long secondInvitationId = ((Integer) JsonPath.read(secondResponse, "$.id")).longValue();
+        assertThat(secondInvitationId).isNotEqualTo(firstInvitationId);
+
+        // 4. Verify first invitation is now EXPIRED and second is PENDING
+        GroupInvitation updatedFirst = invitationRepository.findById(firstInvitationId).orElseThrow();
+        assertThat(updatedFirst.getStatus()).isEqualTo(GroupInvitationStatus.EXPIRED);
+
+        GroupInvitation updatedSecond = invitationRepository.findById(secondInvitationId).orElseThrow();
+        assertThat(updatedSecond.getStatus()).isEqualTo(GroupInvitationStatus.PENDING);
     }
 
     @Test

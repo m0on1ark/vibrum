@@ -11,6 +11,8 @@ public interface GroupInvitationRepository extends JpaRepository<GroupInvitation
 
     boolean existsByGroupIdAndInvitedUserIdAndStatus(Long groupId, Long invitedUserId, GroupInvitationStatus status);
 
+    Optional<GroupInvitation> findByGroupIdAndInvitedUserIdAndStatus(Long groupId, Long invitedUserId, GroupInvitationStatus status);
+
     @Query("SELECT gi FROM GroupInvitation gi JOIN FETCH gi.group JOIN FETCH gi.invitedUser JOIN FETCH gi.invitedBy WHERE gi.id = :id")
     Optional<GroupInvitation> findByIdWithDetails(@Param("id") Long id);
 

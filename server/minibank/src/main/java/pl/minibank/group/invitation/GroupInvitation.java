@@ -81,4 +81,13 @@ public class GroupInvitation {
         this.status = GroupInvitationStatus.DECLINED;
         this.respondedAt = now;
     }
+
+    public void expire(Instant now) {
+        this.status = GroupInvitationStatus.EXPIRED;
+        this.respondedAt = now;
+    }
+
+    void setExpiresAt(Instant expiresAt) {
+        this.expiresAt = expiresAt;
+    }
 }
