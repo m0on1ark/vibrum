@@ -21,7 +21,7 @@ import { APP_PATHS } from "@/constants";
 import {
   changePasswordSchema,
   type ChangePasswordInput,
-} from "@/lib/auth-schema";
+} from "@/lib/auth/schema";
 
 export function ChangePasswordForm() {
   const [error, setError] = useState<string | null>(null);

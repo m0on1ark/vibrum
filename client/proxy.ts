@@ -11,8 +11,8 @@ import {
   DEFAULT_REFRESH_MAX_AGE,
   REFRESH_TOKEN_COOKIE,
   sessionCookieOptions,
-} from "@/lib/auth-cookies";
-import { refreshSession, type Session } from "@/lib/refresh-session";
+} from "@/lib/auth/cookies";
+import { refreshSession, type Session } from "@/lib/auth/session";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

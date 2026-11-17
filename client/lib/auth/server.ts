@@ -6,8 +6,8 @@ import {
   DEFAULT_REFRESH_MAX_AGE,
   REFRESH_TOKEN_COOKIE,
   sessionCookieOptions,
-} from "./auth-cookies";
-import type { Session } from "./refresh-session";
+} from "@/lib/auth/cookies";
+import type { Session } from "@/lib/auth/session";
 
 export async function setSessionCookies(session: Session) {
   const cookieStore = await cookies();

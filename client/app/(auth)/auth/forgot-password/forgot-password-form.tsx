@@ -20,7 +20,7 @@ import { APP_PATHS } from "@/constants";
 import {
   forgotPasswordSchema,
   type ForgotPasswordInput,
-} from "@/lib/auth-schema";
+} from "@/lib/auth/schema";
 
 export function ForgotPasswordForm() {
   const [error, setError] = useState<string | null>(null);

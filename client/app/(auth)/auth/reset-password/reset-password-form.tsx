@@ -21,7 +21,7 @@ import { APP_PATHS } from "@/constants";
 import {
   resetPasswordSchema,
   type ResetPasswordInput,
-} from "@/lib/auth-schema";
+} from "@/lib/auth/schema";
 
 export function ResetPasswordForm({ token }: { token: string | undefined }) {
   const [error, setError] = useState<string | null>(null);

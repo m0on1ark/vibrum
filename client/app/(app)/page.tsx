@@ -5,8 +5,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { APP_PATHS } from "@/constants";
 import { API_PATHS, apiUrl } from "@/constants/api-paths";
-import type { CurrentUser } from "@/lib/auth-schema";
-import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import type { CurrentUser } from "@/lib/auth/schema";
+import { fetchWithAuth } from "@/lib/shared/fetch-with-auth";
 
 export default function HomePage() {
   return (

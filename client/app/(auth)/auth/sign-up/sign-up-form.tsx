@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { APP_PATHS } from "@/constants";
-import { signUpSchema, type SignUpInput } from "@/lib/auth-schema";
+import { signUpSchema, type SignUpInput } from "@/lib/auth/schema";
 
 export function SignUpForm() {
   const router = useRouter();
