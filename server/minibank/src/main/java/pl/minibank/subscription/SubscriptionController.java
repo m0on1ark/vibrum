@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import pl.minibank.subscription.dto.SubscriptionResponse;
+import pl.minibank.subscription.dto.SubscriptionTotalResponse;
 
 import java.util.List;
 
@@ -24,6 +25,11 @@ public class SubscriptionController {
     @GetMapping
     public List<SubscriptionResponse> list(@AuthenticationPrincipal Jwt jwt) {
         return subscriptionService.list(userId(jwt));
+    }
+
+    @GetMapping("/summary")
+    public List<SubscriptionTotalResponse> summary(@AuthenticationPrincipal Jwt jwt) {
+        return subscriptionService.totals(userId(jwt));
     }
 
     @PostMapping("/detect")

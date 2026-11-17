@@ -8,11 +8,17 @@ import pl.minibank.category.CategorizationEngine;
 import pl.minibank.category.CategorizationRule;
 import pl.minibank.common.exception.NotFoundException;
 import pl.minibank.subscription.dto.SubscriptionResponse;
+import pl.minibank.subscription.dto.SubscriptionTotalResponse;
 import pl.minibank.user.User;
 import pl.minibank.user.UserRepository;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +35,27 @@ public class SubscriptionService {
     public List<SubscriptionResponse> list(Long userId) {
         return subscriptionRepository.findAllByUserId(userId).stream()
                 .map(SubscriptionResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubscriptionTotalResponse> totals(Long userId) {
+        Map<String, List<DetectedSubscription>> byCurrency = new TreeMap<>();
+        for (DetectedSubscription subscription : subscriptionRepository.findAllByUserId(userId)) {
+            byCurrency.computeIfAbsent(subscription.getCurrency(), c -> new ArrayList<>()).add(subscription);
+        }
+
+        return byCurrency.entrySet().stream()
+                .map(entry -> {
+                    BigDecimal yearly = entry.getValue().stream()
+                            .map(s -> s.getBillingPeriod().yearlyCost(s.getAmount()))
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    return new SubscriptionTotalResponse(
+                            entry.getKey(),
+                            entry.getValue().size(),
+                            yearly.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP),
+                            yearly.setScale(2, RoundingMode.HALF_UP));
+                })
                 .toList();
     }
 

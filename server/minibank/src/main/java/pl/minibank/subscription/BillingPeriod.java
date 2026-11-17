@@ -1,20 +1,23 @@
 package pl.minibank.subscription;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public enum BillingPeriod {
-    WEEKLY(6, 8, 3),
-    MONTHLY(27, 33, 3),
-    YEARLY(355, 375, 2);
+    WEEKLY(6, 8, 3, 52),
+    MONTHLY(27, 33, 3, 12),
+    YEARLY(355, 375, 2, 1);
 
     private final int minDays;
     private final int maxDays;
     private final int minOccurrences;
+    private final int paymentsPerYear;
 
-    BillingPeriod(int minDays, int maxDays, int minOccurrences) {
+    BillingPeriod(int minDays, int maxDays, int minOccurrences, int paymentsPerYear) {
         this.minDays = minDays;
         this.maxDays = maxDays;
         this.minOccurrences = minOccurrences;
+        this.paymentsPerYear = paymentsPerYear;
     }
 
     public boolean accepts(long days) {
@@ -27,6 +30,10 @@ public enum BillingPeriod {
 
     public int maxDays() {
         return maxDays;
+    }
+
+    public BigDecimal yearlyCost(BigDecimal amount) {
+        return amount.multiply(BigDecimal.valueOf(paymentsPerYear));
     }
 
     public LocalDate next(LocalDate date) {

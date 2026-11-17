@@ -138,9 +138,39 @@ class SubscriptionApiTests {
     }
 
     @Test
+    void summaryAddsUpMonthlyAndYearlyCost() throws Exception {
+        LocalDate lastPayment = LocalDate.now().minusDays(2);
+        when(paymentSource.findPayments(anyLong())).thenReturn(List.of(
+                netflix(lastPayment.minusMonths(2)),
+                netflix(lastPayment.minusMonths(1)),
+                netflix(lastPayment),
+                newspaper(lastPayment.minusWeeks(2)),
+                newspaper(lastPayment.minusWeeks(1)),
+                newspaper(lastPayment)));
+        mockMvc.perform(post("/api/subscriptions/detect").header("Authorization", "Bearer " + token))
+                .andExpect(jsonPath("$", hasSize(2)));
+
+        mockMvc.perform(get("/api/subscriptions/summary").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].currency").value("PLN"))
+                .andExpect(jsonPath("$[0].count").value(2))
+                .andExpect(jsonPath("$[0].monthlyCost").value(108.00))
+                .andExpect(jsonPath("$[0].yearlyCost").value(1296.00));
+    }
+
+    @Test
+    void summaryIsEmptyWithoutSubscriptions() throws Exception {
+        mockMvc.perform(get("/api/subscriptions/summary").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
     void requiresAuthentication() throws Exception {
         mockMvc.perform(get("/api/subscriptions")).andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/subscriptions/detect")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/subscriptions/summary")).andExpect(status().isUnauthorized());
     }
 
     private long detectAndGetFirstId(String accessToken) throws Exception {
@@ -149,6 +179,10 @@ class SubscriptionApiTests {
                 .andReturn().getResponse().getContentAsString();
         Number id = JsonPath.read(response, "$[0].id");
         return id.longValue();
+    }
+
+    private static PaymentRecord newspaper(LocalDate date) {
+        return new PaymentRecord(date, new BigDecimal("-15.00"), "PLN", "Gazeta Wyborcza", null);
     }
 
     private static PaymentRecord netflix(LocalDate date) {
