@@ -1,13 +1,15 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import { changePasswordAction } from "@/app/(app)/account/password/actions";
 import { PasswordInput } from "@/components/auth/password-input";
+import { useFormAction } from "@/hooks/use-form-action";
+import { FormError } from "@/components/form-error";
+import { SubmitButton } from "@/components/submit-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,10 +23,9 @@ import { APP_PATHS } from "@/constants";
 import {
   changePasswordSchema,
   type ChangePasswordInput,
-} from "@/lib/auth-schema";
+} from "@/lib/auth/schema";
 
 export function ChangePasswordForm() {
-  const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const form = useForm<ChangePasswordInput>({
     resolver: zodResolver(changePasswordSchema),
@@ -32,19 +33,12 @@ export function ChangePasswordForm() {
   });
   const { isSubmitting } = form.formState;
 
-  async function onSubmit(values: ChangePasswordInput) {
-    setError(null);
-    try {
-      const result = await changePasswordAction(values);
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
+  const { submit, error } = useFormAction(
+    (values: ChangePasswordInput) => changePasswordAction(values),
+    () => {
       setDone(true);
-    } catch {
-      setError("Could not reach the server. Please try again.");
-    }
-  }
+    },
+  );
 
   if (done) {
     return (
@@ -63,13 +57,9 @@ export function ChangePasswordForm() {
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+    <form onSubmit={form.handleSubmit(submit)} noValidate>
       <FieldGroup>
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
+        <FormError message={error} />
 
         <Controller
           name="currentPassword"
@@ -137,21 +127,9 @@ export function ChangePasswordForm() {
           )}
         />
 
-        <Button
-          type="submit"
-          size="lg"
-          className="h-11 text-base"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="animate-spin" />
-              Zapisywanie…
-            </>
-          ) : (
-            "Zmień hasło"
-          )}
-        </Button>
+        <SubmitButton pending={isSubmitting} pendingLabel="Zapisywanie…">
+          Zmień hasło
+        </SubmitButton>
       </FieldGroup>
     </form>
   );

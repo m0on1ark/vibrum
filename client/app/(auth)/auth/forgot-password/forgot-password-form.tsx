@@ -1,14 +1,15 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import { forgotPasswordAction } from "@/app/(auth)/auth/forgot-password/actions";
+import { useFormAction } from "@/hooks/use-form-action";
+import { FormError } from "@/components/form-error";
+import { SubmitButton } from "@/components/submit-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldError,
@@ -20,10 +21,9 @@ import { APP_PATHS } from "@/constants";
 import {
   forgotPasswordSchema,
   type ForgotPasswordInput,
-} from "@/lib/auth-schema";
+} from "@/lib/auth/schema";
 
 export function ForgotPasswordForm() {
-  const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const form = useForm<ForgotPasswordInput>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -31,19 +31,12 @@ export function ForgotPasswordForm() {
   });
   const { isSubmitting } = form.formState;
 
-  async function onSubmit(values: ForgotPasswordInput) {
-    setError(null);
-    try {
-      const result = await forgotPasswordAction(values);
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
+  const { submit, error } = useFormAction(
+    (values: ForgotPasswordInput) => forgotPasswordAction(values),
+    (values) => {
       setSentTo(values.email);
-    } catch {
-      setError("Could not reach the server. Please try again.");
-    }
-  }
+    },
+  );
 
   return (
     <div className="grid gap-8">
@@ -64,13 +57,9 @@ export function ForgotPasswordForm() {
           </AlertDescription>
         </Alert>
       ) : (
-        <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+        <form onSubmit={form.handleSubmit(submit)} noValidate>
           <FieldGroup>
-            {error ? (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : null}
+            <FormError message={error} />
 
             <Controller
               name="email"
@@ -96,21 +85,9 @@ export function ForgotPasswordForm() {
               )}
             />
 
-            <Button
-              type="submit"
-              size="lg"
-              className="h-11 text-base"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="animate-spin" />
-                  Wysyłanie…
-                </>
-              ) : (
-                "Wyślij link"
-              )}
-            </Button>
+            <SubmitButton pending={isSubmitting} pendingLabel="Wysyłanie…">
+              Wyślij link
+            </SubmitButton>
           </FieldGroup>
         </form>
       )}

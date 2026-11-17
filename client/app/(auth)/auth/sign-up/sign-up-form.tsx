@@ -1,16 +1,15 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import { signUpAction } from "@/app/(auth)/auth/sign-up/actions";
 import { PasswordInput } from "@/components/auth/password-input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { useFormAction } from "@/hooks/use-form-action";
+import { FormError } from "@/components/form-error";
+import { SubmitButton } from "@/components/submit-button";
 import {
   Field,
   FieldDescription,
@@ -20,31 +19,23 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { APP_PATHS } from "@/constants";
-import { signUpSchema, type SignUpInput } from "@/lib/auth-schema";
+import { signUpSchema, type SignUpInput } from "@/lib/auth/schema";
 
 export function SignUpForm() {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
     defaultValues: { displayName: "", email: "", password: "" },
   });
   const { isSubmitting } = form.formState;
 
-  async function onSubmit(values: SignUpInput) {
-    setError(null);
-    try {
-      const result = await signUpAction(values);
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
+  const { submit, error } = useFormAction(
+    (values: SignUpInput) => signUpAction(values),
+    () => {
       router.replace(APP_PATHS.home);
       router.refresh();
-    } catch {
-      setError("Could not reach the server. Please try again.");
-    }
-  }
+    },
+  );
 
   return (
     <div className="grid gap-8">
@@ -58,13 +49,9 @@ export function SignUpForm() {
         </p>
       </header>
 
-      <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+      <form onSubmit={form.handleSubmit(submit)} noValidate>
         <FieldGroup>
-          {error ? (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
+          <FormError message={error} />
 
           <Controller
             name="displayName"
@@ -133,21 +120,9 @@ export function SignUpForm() {
             )}
           />
 
-          <Button
-            type="submit"
-            size="lg"
-            className="h-11 text-base"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="animate-spin" />
-                Tworzenie konta…
-              </>
-            ) : (
-              "Załóż konto"
-            )}
-          </Button>
+          <SubmitButton pending={isSubmitting} pendingLabel="Tworzenie konta…">
+            Załóż konto
+          </SubmitButton>
         </FieldGroup>
       </form>
 

@@ -1,11 +1,11 @@
 "use server";
 
 import { API_PATHS, apiUrl } from "@/constants/api-paths";
-import { readApiError } from "@/lib/api-error";
+import { readApiError } from "@/lib/shared/api-error";
 import {
   forgotPasswordSchema,
   type ForgotPasswordInput,
-} from "@/lib/auth-schema";
+} from "@/lib/auth/schema";
 
 export async function forgotPasswordAction(input: ForgotPasswordInput) {
   const parsed = forgotPasswordSchema.safeParse(input);

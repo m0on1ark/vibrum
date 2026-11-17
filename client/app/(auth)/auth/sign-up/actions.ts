@@ -1,8 +1,8 @@
 "use server";
 
 import { API_PATHS } from "@/constants/api-paths";
-import { requestAuthToken } from "@/lib/auth-request";
-import { signUpSchema, type SignUpInput } from "@/lib/auth-schema";
+import { requestAuthToken } from "@/lib/auth/request";
+import { signUpSchema, type SignUpInput } from "@/lib/auth/schema";
 
 export async function signUpAction(input: SignUpInput) {
   const parsed = signUpSchema.safeParse(input);
