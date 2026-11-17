@@ -100,9 +100,55 @@ class SubscriptionApiTests {
     }
 
     @Test
+    void dismissedSubscriptionStaysHiddenAfterNextDetect() throws Exception {
+        LocalDate lastPayment = LocalDate.now().minusDays(5);
+        when(paymentSource.findPayments(anyLong())).thenReturn(List.of(
+                netflix(lastPayment.minusMonths(2)),
+                netflix(lastPayment.minusMonths(1)),
+                netflix(lastPayment)));
+        long id = detectAndGetFirstId(token);
+
+        mockMvc.perform(post("/api/subscriptions/" + id + "/dismiss").header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/subscriptions").header("Authorization", "Bearer " + token))
+                .andExpect(jsonPath("$", hasSize(0)));
+        mockMvc.perform(post("/api/subscriptions/detect").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+
+        mockMvc.perform(post("/api/subscriptions/detect").header("Authorization", "Bearer " + otherToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Test
+    void cannotDismissForeignSubscription() throws Exception {
+        LocalDate lastPayment = LocalDate.now().minusDays(5);
+        when(paymentSource.findPayments(anyLong())).thenReturn(List.of(
+                netflix(lastPayment.minusMonths(2)),
+                netflix(lastPayment.minusMonths(1)),
+                netflix(lastPayment)));
+        long id = detectAndGetFirstId(token);
+
+        mockMvc.perform(post("/api/subscriptions/" + id + "/dismiss").header("Authorization", "Bearer " + otherToken))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/subscriptions").header("Authorization", "Bearer " + token))
+                .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Test
     void requiresAuthentication() throws Exception {
         mockMvc.perform(get("/api/subscriptions")).andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/subscriptions/detect")).andExpect(status().isUnauthorized());
+    }
+
+    private long detectAndGetFirstId(String accessToken) throws Exception {
+        String response = mockMvc.perform(post("/api/subscriptions/detect").header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Number id = JsonPath.read(response, "$[0].id");
+        return id.longValue();
     }
 
     private static PaymentRecord netflix(LocalDate date) {

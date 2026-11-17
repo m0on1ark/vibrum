@@ -64,6 +64,7 @@ public class SubscriptionDetector {
 
             return Optional.of(new DetectedPattern(
                     merchantName(last).trim(),
+                    merchantKey(merchantName(last)),
                     last.amount().abs(),
                     last.currency(),
                     period,
@@ -98,6 +99,7 @@ public class SubscriptionDetector {
 
     public record DetectedPattern(
             String merchant,
+            String merchantKey,
             BigDecimal amount,
             String currency,
             BillingPeriod period,

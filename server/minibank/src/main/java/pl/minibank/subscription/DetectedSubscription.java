@@ -35,6 +35,9 @@ public class DetectedSubscription extends BaseEntity {
     @Column(nullable = false)
     private String merchant;
 
+    @Column(name = "merchant_key", nullable = false)
+    private String merchantKey;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 
@@ -58,6 +61,7 @@ public class DetectedSubscription extends BaseEntity {
         this.user = user;
         this.category = category;
         this.merchant = pattern.merchant();
+        this.merchantKey = pattern.merchantKey();
         this.amount = pattern.amount();
         this.currency = pattern.currency();
         this.billingPeriod = pattern.period();
