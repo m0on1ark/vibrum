@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.stereotype.Component;
+import pl.minibank.common.exception.BadRequestException;
 import pl.minibank.transaction.dto.ParsedTransactionDto;
 import pl.minibank.transaction.entity.BankType;
 
@@ -32,7 +33,7 @@ public class RevolutJsonParser implements StatementParser {
             // Map the JSON array directly to a List of ParsedTransactionDto objects
             return objectMapper.readValue(inputStream, new TypeReference<List<ParsedTransactionDto>>() {});
         } catch (Exception e) {
-            throw new IllegalArgumentException("Failed to parse Revolut JSON statement: " + e.getMessage(), e);
+            throw new BadRequestException("Could not read the Revolut statement file");
         }
     }
 }

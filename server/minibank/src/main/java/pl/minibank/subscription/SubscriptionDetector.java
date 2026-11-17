@@ -1,7 +1,6 @@
 package pl.minibank.subscription;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -11,69 +10,93 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 
 public class SubscriptionDetector {
 
-    private static final BigDecimal AMOUNT_TOLERANCE = new BigDecimal("0.10");
+    private static final BigDecimal PRICE_CHANGE_TOLERANCE = new BigDecimal("0.15");
+    private static final double MIN_RECURRING_SHARE = 0.5;
 
     public List<DetectedPattern> detect(List<PaymentRecord> payments, LocalDate today) {
         Map<String, List<PaymentRecord>> byMerchant = new LinkedHashMap<>();
+        LocalDate latestPayment = null;
         for (PaymentRecord payment : payments) {
             if (payment.amount() == null || payment.amount().signum() >= 0) {
                 continue;
             }
             String key = merchantKey(merchantName(payment)) + "|" + payment.currency();
             byMerchant.computeIfAbsent(key, k -> new ArrayList<>()).add(payment);
+            if (latestPayment == null || payment.date().isAfter(latestPayment)) {
+                latestPayment = payment.date();
+            }
         }
+        if (latestPayment == null) {
+            return List.of();
+        }
+        LocalDate asOf = latestPayment.isBefore(today) ? latestPayment : today;
 
         List<DetectedPattern> result = new ArrayList<>();
         for (List<PaymentRecord> group : byMerchant.values()) {
-            findPattern(group, today).ifPresent(result::add);
+            result.addAll(findPatterns(group, asOf));
         }
         result.sort(Comparator.comparing(DetectedPattern::nextPaymentDate));
         return result;
     }
 
-    private Optional<DetectedPattern> findPattern(List<PaymentRecord> group, LocalDate today) {
-        BigDecimal median = median(group.stream().map(p -> p.amount().abs()).toList());
-        BigDecimal tolerance = median.multiply(AMOUNT_TOLERANCE);
-        List<PaymentRecord> similar = group.stream()
-                .filter(p -> p.amount().abs().subtract(median).abs().compareTo(tolerance) <= 0)
-                .sorted(Comparator.comparing(PaymentRecord::date))
-                .toList();
-        if (similar.size() < 2) {
-            return Optional.empty();
-        }
-
-        List<Long> intervals = new ArrayList<>();
-        for (int i = 1; i < similar.size(); i++) {
-            intervals.add(ChronoUnit.DAYS.between(similar.get(i - 1).date(), similar.get(i).date()));
-        }
+    private List<DetectedPattern> findPatterns(List<PaymentRecord> group, LocalDate asOf) {
+        List<PaymentRecord> remaining = new ArrayList<>(group);
+        remaining.sort(Comparator.comparing(PaymentRecord::date));
+        List<List<PaymentRecord>> recurring = new ArrayList<>();
+        List<DetectedPattern> patterns = new ArrayList<>();
 
         for (BillingPeriod period : BillingPeriod.values()) {
-            boolean regular = intervals.stream().allMatch(period::accepts);
-            if (!regular || similar.size() < period.minOccurrences()) {
-                continue;
+            for (List<PaymentRecord> chain : chains(remaining, period)) {
+                if (chain.size() < period.minOccurrences()) {
+                    continue;
+                }
+                recurring.add(chain);
+                remaining.removeIf(payment -> chain.stream().anyMatch(member -> member == payment));
+                PaymentRecord last = chain.getLast();
+                if (ChronoUnit.DAYS.between(last.date(), asOf) <= period.maxDays()) {
+                    patterns.add(new DetectedPattern(
+                            merchantName(last).trim(),
+                            merchantKey(merchantName(last)),
+                            last.title(),
+                            last.amount().abs(),
+                            last.currency(),
+                            period,
+                            chain.size(),
+                            last.date(),
+                            period.next(last.date())));
+                }
             }
-
-            PaymentRecord last = similar.getLast();
-            if (ChronoUnit.DAYS.between(last.date(), today) > period.maxDays()) {
-                return Optional.empty();
-            }
-
-            return Optional.of(new DetectedPattern(
-                    merchantName(last).trim(),
-                    merchantKey(merchantName(last)),
-                    last.title(),
-                    last.amount().abs(),
-                    last.currency(),
-                    period,
-                    similar.size(),
-                    last.date(),
-                    period.next(last.date())));
         }
-        return Optional.empty();
+
+        int recurringPayments = recurring.stream().mapToInt(List::size).sum();
+        return recurringPayments >= group.size() * MIN_RECURRING_SHARE ? patterns : List.of();
+    }
+
+    private static List<List<PaymentRecord>> chains(List<PaymentRecord> payments, BillingPeriod period) {
+        List<List<PaymentRecord>> chains = new ArrayList<>();
+        for (PaymentRecord payment : payments) {
+            List<PaymentRecord> best = null;
+            BigDecimal bestDifference = null;
+            for (List<PaymentRecord> chain : chains) {
+                PaymentRecord last = chain.getLast();
+                BigDecimal difference = payment.amount().abs().subtract(last.amount().abs()).abs();
+                boolean fits = period.acceptsWithOneMissed(ChronoUnit.DAYS.between(last.date(), payment.date()))
+                        && difference.compareTo(last.amount().abs().multiply(PRICE_CHANGE_TOLERANCE)) <= 0;
+                if (fits && (bestDifference == null || difference.compareTo(bestDifference) < 0)) {
+                    best = chain;
+                    bestDifference = difference;
+                }
+            }
+            if (best != null) {
+                best.add(payment);
+            } else {
+                chains.add(new ArrayList<>(List.of(payment)));
+            }
+        }
+        return chains;
     }
 
     private static String merchantName(PaymentRecord payment) {
@@ -87,15 +110,6 @@ public class SubscriptionDetector {
                 .replaceAll("[^A-Z ]", " ")
                 .replaceAll("\\s+", " ")
                 .trim();
-    }
-
-    private static BigDecimal median(List<BigDecimal> values) {
-        List<BigDecimal> sorted = values.stream().sorted().toList();
-        int middle = sorted.size() / 2;
-        if (sorted.size() % 2 == 1) {
-            return sorted.get(middle);
-        }
-        return sorted.get(middle - 1).add(sorted.get(middle)).divide(BigDecimal.TWO, 2, RoundingMode.HALF_UP);
     }
 
     public record DetectedPattern(

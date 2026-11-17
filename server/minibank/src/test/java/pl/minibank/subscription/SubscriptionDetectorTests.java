@@ -4,7 +4,9 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
@@ -95,7 +97,52 @@ class SubscriptionDetectorTests {
         List<PaymentRecord> payments = List.of(
                 expense("2026-03-15", "43.00", "NETFLIX.COM", null),
                 expense("2026-04-15", "43.00", "NETFLIX.COM", null),
-                expense("2026-05-15", "43.00", "NETFLIX.COM", null));
+                expense("2026-05-15", "43.00", "NETFLIX.COM", null),
+                expense("2026-11-10", "45.20", "BIEDRONKA 1234 WARSZAWA", null));
+
+        assertThat(detector.detect(payments, TODAY)).isEmpty();
+    }
+
+    @Test
+    void judgesCancellationFromTheLatestImportedPayment() {
+        List<PaymentRecord> payments = List.of(
+                expense("2026-08-03", "125.99", "ZDROFIT WOLA RECURRING", null),
+                expense("2026-09-03", "125.99", "ZDROFIT WOLA RECURRING", null),
+                expense("2026-10-03", "125.99", "ZDROFIT WOLA RECURRING", null),
+                expense("2026-10-26", "5.99", "ZABKA", null));
+
+        assertThat(detector.detect(payments, TODAY))
+                .extracting(SubscriptionDetector.DetectedPattern::merchant)
+                .containsExactly("ZDROFIT WOLA RECURRING");
+    }
+
+    @Test
+    void findsSeveralSubscriptionsOfOneMerchantDespitePriceChangesAndMissedPayment() {
+        List<PaymentRecord> payments = new ArrayList<>();
+        for (int month = 4; month <= 10; month++) {
+            String price = month < 7 ? "23.99" : "26.99";
+            payments.add(expense("2026-%02d-16".formatted(month), price, "Spotify", null));
+            payments.add(expense("2026-%02d-23".formatted(month), "14.49", "Spotify", null));
+        }
+        payments.removeIf(payment -> payment.date().equals(LocalDate.of(2026, 8, 23)));
+
+        List<SubscriptionDetector.DetectedPattern> result = detector.detect(payments, TODAY);
+
+        assertThat(result)
+                .extracting(SubscriptionDetector.DetectedPattern::amount, SubscriptionDetector.DetectedPattern::occurrences)
+                .containsExactlyInAnyOrder(tuple(new BigDecimal("26.99"), 7), tuple(new BigDecimal("14.49"), 6));
+    }
+
+    @Test
+    void frequentShoppingIsNotASubscription() {
+        Random random = new Random(42);
+        List<PaymentRecord> payments = new ArrayList<>();
+        LocalDate day = LocalDate.of(2026, 5, 1);
+        for (int i = 0; i < 80; i++) {
+            day = day.plusDays(1 + random.nextInt(3));
+            String amount = BigDecimal.valueOf(300 + random.nextInt(9000), 2).toPlainString();
+            payments.add(expense(day.toString(), amount, "JMP S.A. BIEDRONKA", null));
+        }
 
         assertThat(detector.detect(payments, TODAY)).isEmpty();
     }

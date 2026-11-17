@@ -18,4 +18,5 @@ public class ParsedTransactionDto {
     private String currency;
     private String title;
     private String recipient;
+    private String reference;
 }
