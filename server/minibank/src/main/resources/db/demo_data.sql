@@ -6,10 +6,10 @@
 -- 1. Demo Users
 INSERT INTO users (id, email, password_hash, display_name, base_currency, role)
 VALUES
-    (101, 'alice@example.com', '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi5U3kS9VqA2P4QjXm8Y.lP1sQ7R2.e', 'Alice Kowalska', 'PLN', 'USER'),
-    (102, 'bob@example.com', '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi5U3kS9VqA2P4QjXm8Y.lP1sQ7R2.e', 'Bob Nowak', 'PLN', 'USER'),
-    (103, 'charlie@example.com', '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi5U3kS9VqA2P4QjXm8Y.lP1sQ7R2.e', 'Charlie Wisniewski', 'PLN', 'USER'),
-    (104, 'david@example.com', '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi5U3kS9VqA2P4QjXm8Y.lP1sQ7R2.e', 'David Zielinski', 'PLN', 'USER')
+    (101, 'alice@example.com', '$2a$10$nTBUty4PC8kNevPdqOqEUeff1lXzT8hEPThVjVMRHCta6ue//.xoC', 'Alice Kowalska', 'PLN', 'USER'),
+    (102, 'bob@example.com', '$2a$10$nTBUty4PC8kNevPdqOqEUeff1lXzT8hEPThVjVMRHCta6ue//.xoC', 'Bob Nowak', 'PLN', 'USER'),
+    (103, 'charlie@example.com', '$2a$10$nTBUty4PC8kNevPdqOqEUeff1lXzT8hEPThVjVMRHCta6ue//.xoC', 'Charlie Wisniewski', 'PLN', 'USER'),
+    (104, 'david@example.com', '$2a$10$nTBUty4PC8kNevPdqOqEUeff1lXzT8hEPThVjVMRHCta6ue//.xoC', 'David Zielinski', 'PLN', 'USER')
 ON CONFLICT (email) DO NOTHING;
 
 -- 2. Expense Group
@@ -84,3 +84,11 @@ VALUES
     (101, 503, DATE_TRUNC('month', CURRENT_DATE)::DATE, 400.0000, 'PLN')
 ON CONFLICT (user_id, category_id, month_year) DO UPDATE
 SET limit_amount = EXCLUDED.limit_amount;
+
+-- 5. Synchronize Sequences with manually inserted IDs
+SELECT setval('users_id_seq',           COALESCE((SELECT max(id) FROM users), 1));
+SELECT setval('expense_groups_id_seq',  COALESCE((SELECT max(id) FROM expense_groups), 1));
+SELECT setval('shared_expenses_id_seq', COALESCE((SELECT max(id) FROM shared_expenses), 1));
+SELECT setval('expense_splits_id_seq',  COALESCE((SELECT max(id) FROM expense_splits), 1));
+SELECT setval('categories_id_seq',      COALESCE((SELECT max(id) FROM categories), 1));
+SELECT setval('budgets_id_seq',         COALESCE((SELECT max(id) FROM budgets), 1));
