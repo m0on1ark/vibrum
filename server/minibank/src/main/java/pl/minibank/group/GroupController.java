@@ -25,6 +25,9 @@ import pl.minibank.group.dto.GroupResponse;
 import pl.minibank.group.dto.GroupSummaryResponse;
 import pl.minibank.group.dto.MemberResponse;
 import pl.minibank.group.dto.TransferResponse;
+import pl.minibank.group.invitation.GroupInvitationService;
+import pl.minibank.group.invitation.dto.InvitationResponse;
+import pl.minibank.group.invitation.dto.SendInvitationRequest;
 
 import java.util.List;
 
@@ -36,6 +39,7 @@ public class GroupController {
 
     private final GroupService groupService;
     private final SettlementService settlementService;
+    private final GroupInvitationService invitationService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -71,6 +75,17 @@ public class GroupController {
             @AuthenticationPrincipal Jwt jwt
     ) {
         return groupService.addMember(groupId, request, currentUserId(jwt));
+    }
+
+    @PostMapping("/{groupId}/invitations")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Invite user to group", description = "Invites a registered user to the group by email. Caller must be a member.")
+    public InvitationResponse createInvitation(
+            @PathVariable Long groupId,
+            @Valid @RequestBody SendInvitationRequest request,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return invitationService.createInvitation(groupId, request, currentUserId(jwt));
     }
 
     @DeleteMapping("/{groupId}/members/{userId}")
