@@ -283,7 +283,20 @@ class BudgetControllerTests {
                 .category(groceriesCat)
                 .build());
 
-        // 5. Query budget summary -> spentAmount must be exactly 200.00 (150 + 50)
+        // tx5: +50 PLN return in Groceries (today) -> returns must NOT increase spending
+        transactionRepository.save(Transaction.builder()
+                .bankAccount(account)
+                .transactionDate(LocalDate.now())
+                .originalAmount(new BigDecimal("50.00"))
+                .originalCurrency("PLN")
+                .amountInPln(new BigDecimal("50.00"))
+                .exchangeRate(BigDecimal.ONE)
+                .title("Return items")
+                .transactionHash(UUID.randomUUID().toString())
+                .category(groceriesCat)
+                .build());
+
+        // 5. Query budget summary -> spentAmount must be exactly 200.00 (150 + 50, ignoring refund)
         mockMvc.perform(get("/api/budgets/summary?month=" + currentMonth)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -291,6 +304,84 @@ class BudgetControllerTests {
                 .andExpect(jsonPath("$[0].categoryName").value("Groceries"))
                 .andExpect(jsonPath("$[0].limitAmount").value(500.00))
                 .andExpect(jsonPath("$[0].spentAmount").value(200.00));
+    }
+
+    @Test
+    void nonPlnCurrencyBudget_returnsBadRequest400() throws Exception {
+        String token = register(uniqueEmail("eur_user"), "password123", "EurUser");
+
+        Category expenseCat = categoryRepository.findAll().stream()
+                .filter(c -> c.getType() == pl.minibank.category.CategoryType.EXPENSE)
+                .findFirst().orElseThrow();
+
+        mockMvc.perform(post("/api/budgets")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "categoryId": %d,
+                                    "monthYear": "%s",
+                                    "limitAmount": 500.00,
+                                    "currency": "EUR"
+                                }
+                                """.formatted(expenseCat.getId(), LocalDate.now().withDayOfMonth(1))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Only PLN currency is currently supported"));
+    }
+
+    @Test
+    void budgetOnIncomeCategory_returnsBadRequest400() throws Exception {
+        String token = register(uniqueEmail("income_user"), "password123", "IncomeUser");
+
+        Category incomeCat = categoryRepository.findAll().stream()
+                .filter(c -> c.getType() == pl.minibank.category.CategoryType.INCOME)
+                .findFirst().orElseThrow();
+
+        mockMvc.perform(post("/api/budgets")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "categoryId": %d,
+                                    "monthYear": "%s",
+                                    "limitAmount": 5000.00,
+                                    "currency": "PLN"
+                                }
+                                """.formatted(incomeCat.getId(), LocalDate.now().withDayOfMonth(1))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Budgets can only be created for EXPENSE categories"));
+    }
+
+    @Test
+    void duplicateBudgetForSameMonthAndCategory_returnsConflict409() throws Exception {
+        String token = register(uniqueEmail("dup_user"), "password123", "DupUser");
+
+        Category expenseCat = categoryRepository.findAll().stream()
+                .filter(c -> c.getType() == pl.minibank.category.CategoryType.EXPENSE)
+                .findFirst().orElseThrow();
+
+        LocalDate month = LocalDate.now().withDayOfMonth(1);
+        String json = """
+                {
+                    "categoryId": %d,
+                    "monthYear": "%s",
+                    "limitAmount": 300.00,
+                    "currency": "PLN"
+                }
+                """.formatted(expenseCat.getId(), month);
+
+        mockMvc.perform(post("/api/budgets")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/budgets")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Budget already exists for this category and month"));
     }
 
     private String register(String email, String password, String displayName) throws Exception {
