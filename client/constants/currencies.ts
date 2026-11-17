@@ -41,5 +41,4 @@ export const CURRENCY_CODES = CURRENCIES.map(
   (currency) => currency.code,
 ) as [CurrencyCode, ...CurrencyCode[]];
 
-// The backend accepts only PLN for now; extend once it supports more.
-export const ENABLED_CURRENCY_CODES: readonly CurrencyCode[] = ["PLN"];
+export const ENABLED_CURRENCY_CODES: readonly CurrencyCode[] = CURRENCY_CODES;

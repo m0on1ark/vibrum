@@ -16,6 +16,13 @@ import { cn } from "@/lib/utils";
 import { AddExpenseForm } from "./add-expense-form";
 import { SettleButton } from "./member-buttons";
 
+function formatExchangeRate(rate: number) {
+  return new Intl.NumberFormat("pl-PL", {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 6,
+  }).format(rate);
+}
+
 export function ExpensesTab({
   groupId,
   members,
@@ -57,13 +64,25 @@ export function ExpensesTab({
                       · {formatDate(expense.expenseDate)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-2">
                     <Badge variant="outline">
                       {SPLIT_MODE_LABELS[expense.splitMode]}
                     </Badge>
-                    <span className="font-semibold">
-                      {formatMoney(expense.amount, expense.currency)}
-                    </span>
+                    <div className="text-right">
+                      <p className="font-semibold">
+                        {formatMoney(expense.amount, expense.currency)}
+                      </p>
+                      {expense.currency !== "PLN" ? (
+                        <>
+                          <p className="text-sm text-muted-foreground">
+                            {formatMoney(expense.amountInPln, "PLN")}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            kurs {formatExchangeRate(expense.exchangeRate)}
+                          </p>
+                        </>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -101,6 +120,12 @@ export function ExpensesTab({
                           </TableCell>
                           <TableCell>
                             {formatMoney(split.shareAmount, expense.currency)}
+                            {expense.currency !== "PLN" ? (
+                              <span className="text-muted-foreground">
+                                {" · "}
+                                {formatMoney(split.shareAmountInPln, "PLN")}
+                              </span>
+                            ) : null}
                             {split.sharePercent != null
                               ? ` (${formatAmount(split.sharePercent)}%)`
                               : ""}
