@@ -8,17 +8,23 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import pl.minibank.transaction.entity.Transaction;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long>, JpaSpecificationExecutor<Transaction> {
     boolean existsByBankAccountIdAndTransactionHash(Long bankAccountId, String transactionHash);
     
+    @Override
     @EntityGraph(attributePaths = {"category", "bankAccount"})
-    Page<Transaction> findAllByBankAccountUserId(Long userId, Pageable pageable);
+    Page<Transaction> findAll(Specification<Transaction> spec, Pageable pageable);
+
+    @Query("select t from Transaction t where t.bankAccount.user.id = :userId and t.categoryManual = false")
+    List<Transaction> findAllAutoCategorizedByUserId(@Param("userId") Long userId);
 
     @Query("SELECT COALESCE(SUM(-t.amountInPln), 0) " +
            "FROM Transaction t " +

@@ -51,4 +51,7 @@ public class Transaction extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
+
+    @Column(name = "category_manual", nullable = false)
+    private boolean categoryManual;
 }

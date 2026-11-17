@@ -1,12 +1,14 @@
 package pl.minibank.transaction.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import pl.minibank.transaction.dto.BankAccountDto;
 import pl.minibank.transaction.dto.CreateBankAccountRequest;
+import pl.minibank.transaction.dto.RenameBankAccountRequest;
 import pl.minibank.transaction.service.TransactionService;
 import jakarta.validation.Valid;
 
@@ -29,6 +31,22 @@ public class BankAccountController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateBankAccountRequest request) {
         Long userId = Long.valueOf(jwt.getSubject());
-        return ResponseEntity.ok(transactionService.createAccount(userId, request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(transactionService.createAccount(userId, request));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<BankAccountDto> renameAccount(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") Long accountId,
+            @Valid @RequestBody RenameBankAccountRequest request) {
+        Long userId = Long.valueOf(jwt.getSubject());
+        return ResponseEntity.ok(transactionService.renameAccount(userId, accountId, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteAccount(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") Long accountId) {
+        Long userId = Long.valueOf(jwt.getSubject());
+        transactionService.deleteAccount(userId, accountId);
+        return ResponseEntity.noContent().build();
     }
 }

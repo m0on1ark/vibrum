@@ -77,14 +77,49 @@ VALUES
 ON CONFLICT (user_id, category_id, month_year) DO UPDATE
 SET limit_amount = EXCLUDED.limit_amount;
 
--- 5. Payer's own share is already paid
+-- 5. Bank account and transactions for Alice (last three months)
+INSERT INTO bank_accounts (user_id, account_name, bank_type, base_currency)
+SELECT 101, 'PKO Konto Osobiste', 'PKO_BP', 'PLN'
+WHERE NOT EXISTS (SELECT 1 FROM bank_accounts WHERE user_id = 101 AND account_name = 'PKO Konto Osobiste');
+
+INSERT INTO transactions (bank_account_id, transaction_date, original_amount, original_currency, amount_in_pln,
+                          exchange_rate, title, recipient, transaction_hash, category_id)
+SELECT a.id, v.tx_date, v.amount, 'PLN', v.amount, 1.0000, v.title, v.recipient,
+       md5('demo-tx-' || v.n) || md5('demo-tx-' || v.n || '-hash'), c.id
+FROM (VALUES
+    (1,  DATE_TRUNC('month', CURRENT_DATE)::DATE,                                6500.00, 'Wynagrodzenie',            'Firma XYZ Sp. z o.o.', 'Wynagrodzenie'),
+    (2,  (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month')::DATE,         6500.00, 'Wynagrodzenie',            'Firma XYZ Sp. z o.o.', 'Wynagrodzenie'),
+    (3,  (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months')::DATE,        6500.00, 'Wynagrodzenie',            'Firma XYZ Sp. z o.o.', 'Wynagrodzenie'),
+    (4,  DATE_TRUNC('month', CURRENT_DATE)::DATE,                                -184.30, 'BIEDRONKA 1234 WARSZAWA',  'Jeronimo Martins',     'Spożywcze'),
+    (5,  (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month')::DATE,         -212.75, 'BIEDRONKA 1234 WARSZAWA',  'Jeronimo Martins',     'Spożywcze'),
+    (6,  (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months')::DATE,        -160.40, 'BIEDRONKA 1234 WARSZAWA',  'Jeronimo Martins',     'Spożywcze'),
+    (7,  DATE_TRUNC('month', CURRENT_DATE)::DATE,                                 -96.15, 'LIDL SP. Z O.O. 512',      'Lidl',                 'Spożywcze'),
+    (8,  DATE_TRUNC('month', CURRENT_DATE)::DATE,                                 -23.90, 'ZABKA Z4417',              'Zabka Polska',         'Spożywcze'),
+    (9,  DATE_TRUNC('month', CURRENT_DATE)::DATE,                                -250.00, 'ORLEN STACJA 177',         'PKN Orlen',            'Transport'),
+    (10, (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month')::DATE,          -38.50, 'UBER TRIP',                'Uber',                 'Transport'),
+    (11, DATE_TRUNC('month', CURRENT_DATE)::DATE,                                 -54.00, 'MCDONALDS 0071',           'McDonalds',            'Restauracje'),
+    (12, (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month')::DATE,          -72.30, 'GLOVO ZAMOWIENIE',         'Glovo',                'Restauracje'),
+    (13, (CURRENT_DATE - INTERVAL '5 days')::DATE,                                -43.00, 'NETFLIX.COM',              'Netflix International', 'Subskrypcje'),
+    (14, (CURRENT_DATE - INTERVAL '5 days' - INTERVAL '1 month')::DATE,           -43.00, 'NETFLIX.COM',              'Netflix International', 'Subskrypcje'),
+    (15, (CURRENT_DATE - INTERVAL '5 days' - INTERVAL '2 months')::DATE,          -43.00, 'NETFLIX.COM',              'Netflix International', 'Subskrypcje'),
+    (16, (CURRENT_DATE - INTERVAL '8 days')::DATE,                                -23.99, 'SPOTIFY P1A2B3',           'Spotify AB',           'Subskrypcje'),
+    (17, (CURRENT_DATE - INTERVAL '8 days' - INTERVAL '1 month')::DATE,           -23.99, 'SPOTIFY P4C5D6',           'Spotify AB',           'Subskrypcje'),
+    (18, (CURRENT_DATE - INTERVAL '8 days' - INTERVAL '2 months')::DATE,          -23.99, 'SPOTIFY P7E8F9',           'Spotify AB',           'Subskrypcje'),
+    (19, DATE_TRUNC('month', CURRENT_DATE)::DATE,                                -149.00, 'ZDROFIT KARNET',           'Zdrofit Sp. z o.o.',   'Sport'),
+    (20, DATE_TRUNC('month', CURRENT_DATE)::DATE,                                 -60.00, 'Przelew za bilety',        'Bob Nowak',            NULL)
+) AS v(n, tx_date, amount, title, recipient, category)
+JOIN bank_accounts a ON a.user_id = 101 AND a.account_name = 'PKO Konto Osobiste'
+LEFT JOIN categories c ON c.name = v.category AND c.user_id IS NULL
+ON CONFLICT (bank_account_id, transaction_hash) DO NOTHING;
+
+-- 6. Payer's own share is already paid
 UPDATE expense_splits s
 SET is_settled = TRUE
 FROM shared_expenses e
 WHERE s.expense_id = e.id
   AND s.user_id = e.paid_by;
 
--- 6. Synchronize Sequences with manually inserted IDs
+-- 7. Synchronize Sequences with manually inserted IDs
 SELECT setval('users_id_seq',           COALESCE((SELECT max(id) FROM users), 1));
 SELECT setval('expense_groups_id_seq',  COALESCE((SELECT max(id) FROM expense_groups), 1));
 SELECT setval('shared_expenses_id_seq', COALESCE((SELECT max(id) FROM shared_expenses), 1));
