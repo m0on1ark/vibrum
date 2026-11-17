@@ -183,6 +183,9 @@ public class GroupService {
                     splitResult.shareAmount(),
                     splitResult.sharePercent()
             );
+            if (splitUser.getId().equals(payer.getId())) {
+                split.markSettled();
+            }
             expense.addSplit(split);
         }
 
@@ -244,6 +247,9 @@ public class GroupService {
 
         if (!currentUserId.equals(debtorId) && !currentUserId.equals(payerId)) {
             throw new ForbiddenException("Only the payer or debtor can settle this split");
+        }
+        if (debtorId.equals(payerId)) {
+            throw new BadRequestException("The payer's own share does not need settling");
         }
 
         split.markSettled();
