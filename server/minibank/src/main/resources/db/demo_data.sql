@@ -29,43 +29,43 @@ ON CONFLICT DO NOTHING;
 
 -- 3. Shared Expenses & Splits
 -- Expense 1: Hotel (1200 PLN, paid by Alice, EQUAL split: 300 each)
-INSERT INTO shared_expenses (id, group_id, paid_by, title, amount, currency, expense_date, split_mode)
+INSERT INTO shared_expenses (id, group_id, paid_by, title, amount, currency, expense_date, split_mode, exchange_rate, amount_in_pln)
 VALUES
-    (301, 201, 101, 'Hotel Gorski', 1200.0000, 'PLN', CURRENT_DATE - INTERVAL '3 days', 'EQUAL')
+    (301, 201, 101, 'Hotel Gorski', 1200.0000, 'PLN', CURRENT_DATE - INTERVAL '3 days', 'EQUAL', 1.000000, 1200.0000)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO expense_splits (id, expense_id, user_id, share_amount, share_percent, is_settled)
+INSERT INTO expense_splits (id, expense_id, user_id, share_amount, share_percent, is_settled, share_amount_in_pln)
 VALUES
-    (401, 301, 101, 300.0000, NULL, FALSE),
-    (402, 301, 102, 300.0000, NULL, FALSE),
-    (403, 301, 103, 300.0000, NULL, FALSE),
-    (404, 301, 104, 300.0000, NULL, TRUE) -- David already settled with Alice
+    (401, 301, 101, 300.0000, NULL, FALSE, 300.0000),
+    (402, 301, 102, 300.0000, NULL, FALSE, 300.0000),
+    (403, 301, 103, 300.0000, NULL, FALSE, 300.0000),
+    (404, 301, 104, 300.0000, NULL, TRUE, 300.0000) -- David already settled with Alice
 ON CONFLICT (id) DO NOTHING;
 
 -- Expense 2: Kolacja regionalna (400 PLN, paid by Bob, PERCENT split: Alice 30%, Bob 40%, Charlie 30%)
-INSERT INTO shared_expenses (id, group_id, paid_by, title, amount, currency, expense_date, split_mode)
+INSERT INTO shared_expenses (id, group_id, paid_by, title, amount, currency, expense_date, split_mode, exchange_rate, amount_in_pln)
 VALUES
-    (302, 201, 102, 'Karczma Pod Tatrami', 400.0000, 'PLN', CURRENT_DATE - INTERVAL '2 days', 'PERCENT')
+    (302, 201, 102, 'Karczma Pod Tatrami', 400.0000, 'PLN', CURRENT_DATE - INTERVAL '2 days', 'PERCENT', 1.000000, 400.0000)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO expense_splits (id, expense_id, user_id, share_amount, share_percent, is_settled)
+INSERT INTO expense_splits (id, expense_id, user_id, share_amount, share_percent, is_settled, share_amount_in_pln)
 VALUES
-    (405, 302, 101, 120.0000, 30.000, FALSE),
-    (406, 302, 102, 160.0000, 40.000, FALSE),
-    (407, 302, 103, 120.0000, 30.000, FALSE)
+    (405, 302, 101, 120.0000, 30.000, FALSE, 120.0000),
+    (406, 302, 102, 160.0000, 40.000, FALSE, 160.0000),
+    (407, 302, 103, 120.0000, 30.000, FALSE, 120.0000)
 ON CONFLICT (id) DO NOTHING;
 
 -- Expense 3: Paliwo (200 PLN, paid by Charlie, FIXED split)
-INSERT INTO shared_expenses (id, group_id, paid_by, title, amount, currency, expense_date, split_mode)
+INSERT INTO shared_expenses (id, group_id, paid_by, title, amount, currency, expense_date, split_mode, exchange_rate, amount_in_pln)
 VALUES
-    (303, 201, 103, 'Paliwo i autostrada', 200.0000, 'PLN', CURRENT_DATE - INTERVAL '1 day', 'FIXED')
+    (303, 201, 103, 'Paliwo i autostrada', 200.0000, 'PLN', CURRENT_DATE - INTERVAL '1 day', 'FIXED', 1.000000, 200.0000)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO expense_splits (id, expense_id, user_id, share_amount, share_percent, is_settled)
+INSERT INTO expense_splits (id, expense_id, user_id, share_amount, share_percent, is_settled, share_amount_in_pln)
 VALUES
-    (408, 303, 101, 80.0000, NULL, FALSE),
-    (409, 303, 102, 60.0000, NULL, FALSE),
-    (410, 303, 103, 60.0000, NULL, FALSE)
+    (408, 303, 101, 80.0000, NULL, FALSE, 80.0000),
+    (409, 303, 102, 60.0000, NULL, FALSE, 60.0000),
+    (410, 303, 103, 60.0000, NULL, FALSE, 60.0000)
 ON CONFLICT (id) DO NOTHING;
 
 -- 4. Budgets for Alice (Current Month) - assigned to system categories

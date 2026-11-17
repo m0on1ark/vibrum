@@ -1,19 +1,28 @@
 package pl.minibank.group;
 
 import com.jayway.jsonpath.JsonPath;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.minibank.TestcontainersConfiguration;
+import pl.minibank.common.exception.BadRequestException;
+import pl.minibank.currency.service.NbpCurrencyService;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -28,6 +37,15 @@ class GroupControllerTests {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private NbpCurrencyService nbpCurrencyService;
+
+    @BeforeEach
+    void setUp() {
+        Mockito.lenient().when(nbpCurrencyService.getExchangeRateToPln(eq("PLN"), any())).thenReturn(BigDecimal.ONE);
+        Mockito.lenient().when(nbpCurrencyService.getExchangeRateToPln(isNull(), any())).thenReturn(BigDecimal.ONE);
+    }
 
     @Test
     void fullGroupSettlementFlow() throws Exception {
@@ -295,21 +313,84 @@ class GroupControllerTests {
                 .andExpect(jsonPath("$.splits[0].shareAmount").value(70.00))
                 .andExpect(jsonPath("$.splits[1].shareAmount").value(30.00));
 
-        // 2. Non-PLN currency should be rejected with 400 Bad Request
+    }
+
+    @Test
+    void foreignCurrencyExpenseCalculatesExchangeRateAndBalancesInPln() throws Exception {
+        String aliceToken = register(uniqueEmail("alice"), "password123", "Alice");
+        Long groupId = createGroup(aliceToken, "EuroTrip");
+
+        String bobEmail = uniqueEmail("bob");
+        String bobToken = register(bobEmail, "password123", "Bob");
+        addMember(aliceToken, groupId, bobEmail);
+
+        // Mock rate: 1 EUR = 4.2850 PLN
+        Mockito.when(nbpCurrencyService.getExchangeRateToPln(eq("EUR"), any()))
+                .thenReturn(new BigDecimal("4.2850"));
+
+        // Alice pays 100 EUR for Hotel, split equally between Alice and Bob
         mockMvc.perform(post("/api/groups/" + groupId + "/expenses")
                         .header("Authorization", "Bearer " + aliceToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                    "title": "US Hosting",
+                                    "title": "Berlin Hotel",
+                                    "amount": 100.00,
+                                    "currency": "EUR",
+                                    "expenseDate": "%s",
+                                    "splitMode": "EQUAL",
+                                    "splits": []
+                                }
+                                """.formatted(LocalDate.now())))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.amount").value(100.00))
+                .andExpect(jsonPath("$.currency").value("EUR"))
+                .andExpect(jsonPath("$.exchangeRate").value(4.2850))
+                .andExpect(jsonPath("$.amountInPln").value(428.50))
+                .andExpect(jsonPath("$.splits[0].shareAmount").value(50.00))
+                .andExpect(jsonPath("$.splits[0].shareAmountInPln").value(214.25))
+                .andExpect(jsonPath("$.splits[1].shareAmount").value(50.00))
+                .andExpect(jsonPath("$.splits[1].shareAmountInPln").value(214.25));
+
+        // Balances should be in PLN: Alice +214.25, Bob -214.25
+        mockMvc.perform(get("/api/groups/" + groupId + "/balances")
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.displayName == 'Alice')].netBalance").value(214.25))
+                .andExpect(jsonPath("$[?(@.displayName == 'Bob')].netBalance").value(-214.25));
+
+        // Settlements should be in PLN: Bob owes Alice 214.25
+        mockMvc.perform(get("/api/groups/" + groupId + "/settlements")
+                        .header("Authorization", "Bearer " + bobToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].fromDisplayName").value("Bob"))
+                .andExpect(jsonPath("$[0].toDisplayName").value("Alice"))
+                .andExpect(jsonPath("$[0].amount").value(214.25));
+    }
+
+    @Test
+    void invalidCurrencyThrowsBadRequest400() throws Exception {
+        String aliceToken = register(uniqueEmail("alice"), "password123", "Alice");
+        Long groupId = createGroup(aliceToken, "Test Group");
+
+        Mockito.when(nbpCurrencyService.getExchangeRateToPln(eq("XYZ"), any()))
+                .thenThrow(new BadRequestException("Failed to fetch NBP exchange rate for XYZ"));
+
+        mockMvc.perform(post("/api/groups/" + groupId + "/expenses")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "title": "Item",
                                     "amount": 50.00,
-                                    "currency": "USD",
+                                    "currency": "XYZ",
                                     "expenseDate": "%s",
                                     "splitMode": "EQUAL"
                                 }
                                 """.formatted(LocalDate.now())))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("Only PLN currency is currently supported"));
+                .andExpect(jsonPath("$.detail").value("Failed to fetch NBP exchange rate for XYZ"));
     }
 
     @Test
