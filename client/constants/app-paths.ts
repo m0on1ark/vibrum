@@ -2,6 +2,9 @@ export const APP_PATHS = {
   home: "/",
   transactions: "/transactions",
   categories: "/categories",
+  budgets: "/budgets",
+  subscriptions: "/subscriptions",
+  accounts: "/accounts",
   groups: "/groups",
   notifications: "/notifications",
   signIn: "/auth/sign-in",
@@ -9,6 +12,7 @@ export const APP_PATHS = {
   forgotPassword: "/auth/forgot-password",
   resetPassword: "/auth/reset-password",
   sessionExpired: "/auth/expired",
+  profile: "/account/profile",
   changePassword: "/account/password",
 } as const;
 

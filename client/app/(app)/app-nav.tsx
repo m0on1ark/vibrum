@@ -7,8 +7,11 @@ import { APP_PATHS } from "@/constants";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
+  { href: APP_PATHS.home, label: "Pulpit" },
   { href: APP_PATHS.transactions, label: "Transakcje" },
   { href: APP_PATHS.categories, label: "Kategorie" },
+  { href: APP_PATHS.budgets, label: "Budżety" },
+  { href: APP_PATHS.subscriptions, label: "Subskrypcje" },
   { href: APP_PATHS.groups, label: "Grupy" },
 ];
 
@@ -22,7 +25,9 @@ export function AppNav() {
     >
       {ITEMS.map((item) => {
         const active =
-          pathname === item.href || pathname.startsWith(`${item.href}/`);
+          item.href === APP_PATHS.home
+            ? pathname === item.href
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link
             key={item.href}
