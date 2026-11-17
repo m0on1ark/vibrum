@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import pl.minibank.transaction.dto.BankAccountDto;
 import pl.minibank.transaction.dto.CreateBankAccountRequest;
 import pl.minibank.transaction.service.TransactionService;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -15,20 +16,19 @@ import java.util.List;
 @RequestMapping("/api/accounts")
 @RequiredArgsConstructor
 public class BankAccountController {
-
     private final TransactionService transactionService;
-
-    @PostMapping
-    public ResponseEntity<BankAccountDto> createAccount(
-            @AuthenticationPrincipal Jwt jwt,
-            @RequestBody CreateBankAccountRequest request) {
-        Long userId = Long.valueOf(jwt.getSubject());
-        return ResponseEntity.ok(transactionService.createAccount(userId, request));
-    }
 
     @GetMapping
     public ResponseEntity<List<BankAccountDto>> getMyAccounts(@AuthenticationPrincipal Jwt jwt) {
         Long userId = Long.valueOf(jwt.getSubject());
         return ResponseEntity.ok(transactionService.getUserAccounts(userId));
+    }
+
+    @PostMapping
+    public ResponseEntity<BankAccountDto> createAccount(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody CreateBankAccountRequest request) {
+        Long userId = Long.valueOf(jwt.getSubject());
+        return ResponseEntity.ok(transactionService.createAccount(userId, request));
     }
 }

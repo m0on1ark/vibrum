@@ -3,10 +3,12 @@ package pl.minibank.transaction.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import pl.minibank.category.CategorizationEngine;
+import pl.minibank.common.exception.BadRequestException;
 import pl.minibank.common.exception.NotFoundException;
 import pl.minibank.currency.service.NbpCurrencyService;
 import pl.minibank.transaction.dto.*;
@@ -18,8 +20,6 @@ import pl.minibank.transaction.repository.TransactionRepository;
 import pl.minibank.transaction.repository.TransactionSpecification;
 import pl.minibank.user.User;
 import pl.minibank.user.UserRepository;
-import org.springframework.data.jpa.domain.Specification;
-import pl.minibank.transaction.repository.TransactionSpecification;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -54,6 +54,7 @@ public class TransactionService {
         return mapToAccountDto(account);
     }
 
+    @Transactional(readOnly = true)
     public List<BankAccountDto> getUserAccounts(Long userId) {
         return bankAccountRepository.findAllByUserId(userId).stream()
                 .map(this::mapToAccountDto)
@@ -72,7 +73,7 @@ public class TransactionService {
         StatementParser parser = parsers.stream()
                 .filter(p -> p.getSupportedBank() == account.getBankType())
                 .findFirst()
-                .orElseThrow(() -> new NotFoundException("Unsupported bank type: " + account.getBankType()));
+                .orElseThrow(() -> new BadRequestException("Unsupported bank type: " + account.getBankType()));
 
         List<ParsedTransactionDto> parsedTransactions = parser.parse(file.getInputStream());
         int importedCount = 0;
@@ -110,8 +111,17 @@ public class TransactionService {
         return new ImportResultDto(importedCount, skippedCount);
     }
 
-    public Page<TransactionDto> getUserTransactions(Long userId, Pageable pageable) {
-        return transactionRepository.findAllByBankAccountUserId(userId, pageable)
+    @Transactional(readOnly = true)
+    public Page<TransactionDto> getUserTransactions(
+            Long userId, LocalDate startDate, LocalDate endDate, 
+            Long categoryId, Long accountId, Pageable pageable) {
+        
+        Specification<Transaction> spec = Specification.where(TransactionSpecification.belongsToUser(userId))
+                .and(TransactionSpecification.dateBetween(startDate, endDate))
+                .and(TransactionSpecification.hasCategory(categoryId))
+                .and(TransactionSpecification.belongsToAccount(accountId));
+
+        return transactionRepository.findAll(spec, pageable)
                 .map(this::mapToTransactionDto);
     }
 
@@ -137,25 +147,4 @@ public class TransactionService {
                 .categoryName(tx.getCategory() != null ? tx.getCategory().getName() : null)
                 .build();
     }
-
-
-
-    public Page<TransactionDto> getUserTransactions(
-            Long userId, 
-            LocalDate startDate, 
-            LocalDate endDate, 
-            Long categoryId, 
-            Long accountId, 
-            Pageable pageable) {
-        
-        Specification<Transaction> spec = Specification.where(TransactionSpecification.belongsToUser(userId))
-                .and(TransactionSpecification.dateBetween(startDate, endDate))
-                .and(TransactionSpecification.hasCategory(categoryId))
-                .and(TransactionSpecification.belongsToAccount(accountId));
-
-        return transactionRepository.findAll(spec, pageable)
-                .map(this::mapToTransactionDto);
-    }
-
 }
-
