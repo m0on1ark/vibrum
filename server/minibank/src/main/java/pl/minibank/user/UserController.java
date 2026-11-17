@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import pl.minibank.auth.password.PasswordService;
 import pl.minibank.user.dto.ChangePasswordRequest;
+import pl.minibank.user.dto.UpdateProfileRequest;
 import pl.minibank.user.dto.UserResponse;
 
 @RestController
@@ -26,6 +28,11 @@ public class UserController {
     @GetMapping("/me")
     public UserResponse me(@AuthenticationPrincipal Jwt jwt) {
         return userService.getCurrentUser(Long.valueOf(jwt.getSubject()));
+    }
+
+    @PatchMapping("/me")
+    public UserResponse updateProfile(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody UpdateProfileRequest request) {
+        return userService.updateProfile(Long.valueOf(jwt.getSubject()), request);
     }
 
     @PostMapping("/me/password")
