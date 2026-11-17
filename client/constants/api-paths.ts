@@ -16,10 +16,13 @@ export const API_PATHS = {
   },
   accounts: {
     root: "/api/accounts",
+    detail: (id: number) => `/api/accounts/${id}`,
     import: (id: number) => `/api/accounts/${id}/import`,
   },
   transactions: {
     root: "/api/transactions",
+    category: (id: number) => `/api/transactions/${id}/category`,
+    recategorize: "/api/transactions/recategorize",
   },
   categories: {
     root: "/api/categories",
