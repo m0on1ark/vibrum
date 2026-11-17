@@ -14,10 +14,13 @@ import pl.minibank.user.User;
 import pl.minibank.user.UserRepository;
 
 import java.util.Locale;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final String DUMMY_PASSWORD_HASH = "$2a$10$3./OyAX9QMyoFYTIGSwFr.2rZefLbu/6R9hopbOt3yoPWx0sMXR4a";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -38,10 +41,13 @@ public class AuthService {
 
     @Transactional
     public AuthSession login(LoginRequest request, String userAgent) {
-        User user = userRepository.findByEmailIgnoreCase(normalizeEmail(request.email()))
-                .filter(u -> passwordEncoder.matches(request.password(), u.getPasswordHash()))
-                .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
-        return startSession(user, userAgent);
+        Optional<User> user = userRepository.findByEmailIgnoreCase(normalizeEmail(request.email()));
+        String hash = user.map(User::getPasswordHash).orElse(DUMMY_PASSWORD_HASH);
+        boolean passwordMatches = passwordEncoder.matches(request.password(), hash);
+        if (user.isEmpty() || !passwordMatches) {
+            throw new BadCredentialsException("Invalid email or password");
+        }
+        return startSession(user.get(), userAgent);
     }
 
     @Transactional(noRollbackFor = BadCredentialsException.class)

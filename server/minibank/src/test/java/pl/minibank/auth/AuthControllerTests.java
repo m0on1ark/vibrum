@@ -57,6 +57,20 @@ class AuthControllerTests {
     }
 
     @Test
+    void passwordLimitIsCountedInBytes() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerJson(uniqueEmail(), "ж".repeat(37))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password").exists());
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerJson(uniqueEmail(), "ж".repeat(36))))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
     void loginReturnsToken() throws Exception {
         String email = uniqueEmail();
         register(email, "password123");

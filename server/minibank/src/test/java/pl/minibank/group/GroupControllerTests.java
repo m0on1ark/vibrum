@@ -11,8 +11,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import pl.minibank.TestcontainersConfiguration;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -368,6 +370,89 @@ class GroupControllerTests {
                                 """.formatted(charlieEmail)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.detail").value("Only the group creator can directly add members"));
+    }
+
+    @Test
+    void payersOwnShareIsSettledAndCannotBeSettledAgain() throws Exception {
+        String aliceToken = register(uniqueEmail("alice"), "password123", "Alice");
+        String bobEmail = uniqueEmail("bob");
+        String bobToken = register(bobEmail, "password123", "Bob");
+        Long groupId = createGroup(aliceToken, "Pizza night");
+        addMember(aliceToken, groupId, bobEmail);
+
+        String expense = mockMvc.perform(post("/api/groups/" + groupId + "/expenses")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "Pizza", "amount": 100.00, "expenseDate": "2026-11-17", "splitMode": "EQUAL"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.splits[?(@.displayName == 'Alice')].settled").value(hasItem(true)))
+                .andExpect(jsonPath("$.splits[?(@.displayName == 'Bob')].settled").value(hasItem(false)))
+                .andReturn().getResponse().getContentAsString();
+
+        mockMvc.perform(get("/api/groups/" + groupId + "/balances")
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(jsonPath("$[?(@.displayName == 'Alice')].netBalance").value(hasItem(50.0)))
+                .andExpect(jsonPath("$[?(@.displayName == 'Bob')].netBalance").value(hasItem(-50.0)));
+
+        List<Integer> aliceSplit = JsonPath.read(expense, "$.splits[?(@.displayName == 'Alice')].splitId");
+        mockMvc.perform(patch("/api/groups/expenses/splits/" + aliceSplit.getFirst() + "/settle")
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isBadRequest());
+
+        List<Integer> bobSplit = JsonPath.read(expense, "$.splits[?(@.displayName == 'Bob')].splitId");
+        mockMvc.perform(patch("/api/groups/expenses/splits/" + bobSplit.getFirst() + "/settle")
+                        .header("Authorization", "Bearer " + bobToken))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/groups/" + groupId + "/settlements")
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    void thirdPartyCannotSettleSplit_returnsForbidden403() throws Exception {
+        String aliceToken = register(uniqueEmail("alice"), "password123", "Alice");
+        Long groupId = createGroup(aliceToken, "Trip");
+
+        String bobEmail = uniqueEmail("bob");
+        String bobToken = register(bobEmail, "password123", "Bob");
+        addMember(aliceToken, groupId, bobEmail);
+
+        String charlieEmail = uniqueEmail("charlie");
+        String charlieToken = register(charlieEmail, "password123", "Charlie");
+        addMember(aliceToken, groupId, charlieEmail);
+
+        // Alice pays 90 split equally between Alice, Bob, Charlie (each owes 30)
+        String expResponse = mockMvc.perform(post("/api/groups/" + groupId + "/expenses")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "title": "Dinner",
+                                    "amount": 90.00,
+                                    "currency": "PLN",
+                                    "expenseDate": "%s",
+                                    "splitMode": "EQUAL",
+                                    "splits": []
+                                }
+                                """.formatted(LocalDate.now())))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        java.util.List<Integer> bobSplits = JsonPath.read(expResponse, "$.splits[?(@.displayName == 'Bob')].splitId");
+        Integer splitIdBob = bobSplits.get(0);
+
+        // Charlie (a third member of the group, neither payer Alice nor debtor Bob) tries to settle Bob's split -> 403 Forbidden
+        mockMvc.perform(patch("/api/groups/expenses/splits/" + splitIdBob + "/settle")
+                        .header("Authorization", "Bearer " + charlieToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.detail").value("Only the payer or debtor can settle this split"));
+
+        // Bob (debtor) CAN settle his split -> 204 No Content
+        mockMvc.perform(patch("/api/groups/expenses/splits/" + splitIdBob + "/settle")
+                        .header("Authorization", "Bearer " + bobToken))
+                .andExpect(status().isNoContent());
     }
 
     private Long createGroup(String token, String name) throws Exception {
