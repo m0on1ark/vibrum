@@ -24,6 +24,10 @@ public enum BillingPeriod {
         return days >= minDays && days <= maxDays;
     }
 
+    public boolean acceptsWithOneMissed(long days) {
+        return accepts(days) || (days >= 2L * minDays && days <= 2L * maxDays);
+    }
+
     public int minOccurrences() {
         return minOccurrences;
     }
