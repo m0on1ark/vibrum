@@ -11,7 +11,40 @@ export const API_PATHS = {
   },
   users: {
     me: "/api/users/me",
+    password: "/api/users/me/password",
     changePassword: "/api/users/me/password",
+  },
+  accounts: {
+    root: "/api/accounts",
+    import: (id: number) => `/api/accounts/${id}/import`,
+  },
+  transactions: {
+    root: "/api/transactions",
+  },
+  categories: {
+    root: "/api/categories",
+    detail: (id: number) => `/api/categories/${id}`,
+  },
+  categorizationRules: {
+    root: "/api/categorization-rules",
+    detail: (id: number) => `/api/categorization-rules/${id}`,
+    test: "/api/categorization-rules/test",
+  },
+  budgets: {
+    root: "/api/budgets",
+    detail: (id: number) => `/api/budgets/${id}`,
+    summary: "/api/budgets/summary",
+  },
+  subscriptions: {
+    root: "/api/subscriptions",
+    summary: "/api/subscriptions/summary",
+    detect: "/api/subscriptions/detect",
+    dismiss: (id: number) => `/api/subscriptions/${id}/dismiss`,
+  },
+  analytics: {
+    summary: "/api/analytics/summary",
+    byCategory: "/api/analytics/by-category",
+    monthly: "/api/analytics/monthly",
   },
   groups: {
     root: "/api/groups",

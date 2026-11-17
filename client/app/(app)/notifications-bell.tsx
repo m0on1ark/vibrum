@@ -1,5 +1,6 @@
 import { Bell } from "lucide-react";
 import Link from "next/link";
+import { connection } from "next/server";
 
 import { APP_PATHS } from "@/constants";
 import { API_PATHS, apiUrl } from "@/constants/api-paths";
@@ -11,6 +12,7 @@ import {
 } from "@/lib/groups/types";
 
 export async function NotificationsBell() {
+  await connection();
   let pending = 0;
   try {
     const response = await fetchWithAuth(apiUrl(API_PATHS.invitations.root));

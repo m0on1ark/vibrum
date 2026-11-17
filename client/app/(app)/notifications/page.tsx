@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { API_PATHS } from "@/constants/api-paths";
@@ -34,6 +35,7 @@ export default function NotificationsPage() {
 }
 
 async function InvitationsList() {
+  await connection();
   const all = await getJson<GroupInvitation[]>(API_PATHS.invitations.root);
   if (!all) return <LoadError subject="notifications" />;
 
