@@ -54,11 +54,18 @@ public class GroupService {
     @Transactional(readOnly = true)
     public List<GroupSummaryResponse> getUserGroups(Long currentUserId) {
         List<ExpenseGroup> groups = groupRepository.findAllByMemberUserId(currentUserId);
+        if (groups.isEmpty()) {
+            return List.of();
+        }
+
+        // One aggregate query for all groups instead of one query per group (N+1)
+        List<Long> groupIds = groups.stream().map(ExpenseGroup::getId).toList();
+        Map<Long, Long> memberCounts = memberRepository.countMembersByGroupIds(groupIds).stream()
+                .collect(Collectors.toMap(GroupMemberCount::groupId, GroupMemberCount::memberCount));
+
         return groups.stream()
-                .map(group -> {
-                    List<GroupMember> members = memberRepository.findAllByGroupIdWithUser(group.getId());
-                    return GroupSummaryResponse.from(group, members.size());
-                })
+                .map(group -> GroupSummaryResponse.from(
+                        group, memberCounts.getOrDefault(group.getId(), 0L).intValue()))
                 .toList();
     }
 

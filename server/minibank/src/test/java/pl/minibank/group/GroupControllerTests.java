@@ -312,6 +312,63 @@ class GroupControllerTests {
                 .andExpect(jsonPath("$.detail").value("Only PLN currency is currently supported"));
     }
 
+    @Test
+    void listGroupsReturnsCorrectMemberCountForEachGroup() throws Exception {
+        String aliceToken = register(uniqueEmail("alice"), "password123", "Alice");
+        String bobEmail = uniqueEmail("bob");
+        register(bobEmail, "password123", "Bob");
+        String carolEmail = uniqueEmail("carol");
+        register(carolEmail, "password123", "Carol");
+
+        Long soloId = createGroup(aliceToken, "Solo");
+        Long pairId = createGroup(aliceToken, "Pair");
+        Long trioId = createGroup(aliceToken, "Trio");
+
+        addMember(aliceToken, pairId, bobEmail);
+        addMember(aliceToken, trioId, bobEmail);
+        addMember(aliceToken, trioId, carolEmail);
+
+        mockMvc.perform(get("/api/groups")
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(3)))
+                .andExpect(jsonPath("$[?(@.id == %d)].memberCount".formatted(soloId)).value(1))
+                .andExpect(jsonPath("$[?(@.id == %d)].memberCount".formatted(pairId)).value(2))
+                .andExpect(jsonPath("$[?(@.id == %d)].memberCount".formatted(trioId)).value(3));
+    }
+
+    @Test
+    void listGroupsForUserWithoutGroupsReturnsEmptyList() throws Exception {
+        String token = register(uniqueEmail("loner"), "password123", "Loner");
+
+        mockMvc.perform(get("/api/groups")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    private Long createGroup(String token, String name) throws Exception {
+        String response = mockMvc.perform(post("/api/groups")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "%s"}
+                                """.formatted(name)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return ((Integer) JsonPath.read(response, "$.id")).longValue();
+    }
+
+    private void addMember(String token, Long groupId, String email) throws Exception {
+        mockMvc.perform(post("/api/groups/" + groupId + "/members")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "%s"}
+                                """.formatted(email)))
+                .andExpect(status().isCreated());
+    }
+
     private String register(String email, String password, String displayName) throws Exception {
         String json = """
                 {"email": "%s", "password": "%s", "displayName": "%s"}

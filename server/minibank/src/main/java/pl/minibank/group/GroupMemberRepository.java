@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface GroupMemberRepository extends JpaRepository<GroupMember, GroupMemberId> {
@@ -17,4 +18,12 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, GroupM
     List<GroupMember> findAllByGroupIdWithUser(@Param("groupId") Long groupId);
 
     boolean existsByGroupIdAndUserId(Long groupId, Long userId);
+
+    @Query("""
+            SELECT new pl.minibank.group.GroupMemberCount(m.group.id, COUNT(m))
+            FROM GroupMember m
+            WHERE m.group.id IN :groupIds
+            GROUP BY m.group.id
+            """)
+    List<GroupMemberCount> countMembersByGroupIds(@Param("groupIds") Collection<Long> groupIds);
 }
