@@ -8,12 +8,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.minibank.TestcontainersConfiguration;
 import pl.minibank.auth.session.RefreshTokenRepository;
+import pl.minibank.common.security.TokenHasher;
 import pl.minibank.user.UserRepository;
 
 import java.util.regex.Matcher;
@@ -44,6 +46,9 @@ class PasswordTests {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @MockitoBean
     private JavaMailSender mailSender;
@@ -135,6 +140,30 @@ class PasswordTests {
 
         resetPassword(token, NEW_PASSWORD).andExpect(status().isNoContent());
         resetPassword(token, "another-password").andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void expiredResetTokenIsRejected() throws Exception {
+        String email = AuthTestClient.uniqueEmail();
+        client.register(email, "Firefox");
+        forgotPassword(email);
+        String token = sentResetToken(email);
+        jdbcTemplate.update("update password_reset_tokens set expires_at = now() - interval '1 minute' where token_hash = ?",
+                TokenHasher.sha256(token));
+
+        resetPassword(token, NEW_PASSWORD).andExpect(status().isBadRequest());
+        assertThat(client.login(email, AuthTestClient.PASSWORD, "Firefox").getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    void resetEmailStatesConfiguredExpiration() throws Exception {
+        String email = AuthTestClient.uniqueEmail();
+        client.register(email, "Firefox");
+        forgotPassword(email);
+
+        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender).send(captor.capture());
+        assertThat(captor.getValue().getText()).contains("expires in 30 minutes");
     }
 
     @Test
