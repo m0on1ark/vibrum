@@ -84,7 +84,7 @@ class TransactionApiIntegrationTest {
                         .with(jwt().jwt(j -> j.subject(savedUser.getId().toString())))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createAccountPayload))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
                 .andReturn().getResponse().getContentAsString();
 

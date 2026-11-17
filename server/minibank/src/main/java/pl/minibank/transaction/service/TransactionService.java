@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import pl.minibank.category.CategorizationEngine;
+import pl.minibank.category.CategorizationRule;
+import pl.minibank.category.Category;
+import pl.minibank.category.CategoryService;
 import pl.minibank.common.exception.BadRequestException;
 import pl.minibank.common.exception.NotFoundException;
 import pl.minibank.currency.service.NbpCurrencyService;
@@ -26,6 +29,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +42,7 @@ public class TransactionService {
     private final HashService hashService;
     private final NbpCurrencyService nbpCurrencyService;
     private final CategorizationEngine categorizationEngine;
+    private final CategoryService categoryService;
 
     @Transactional
     public BankAccountDto createAccount(Long userId, CreateBankAccountRequest request) {
@@ -63,12 +68,7 @@ public class TransactionService {
 
     @Transactional
     public ImportResultDto importStatement(MultipartFile file, Long accountId, Long userId) throws IOException {
-        BankAccount account = bankAccountRepository.findById(accountId)
-                .orElseThrow(() -> new NotFoundException("Bank account not found"));
-
-        if (!account.getUser().getId().equals(userId)) {
-            throw new NotFoundException("Bank account not found");
-        }
+        BankAccount account = getOwnedAccount(userId, accountId);
 
         StatementParser parser = parsers.stream()
                 .filter(p -> p.getSupportedBank() == account.getBankType())
@@ -125,6 +125,59 @@ public class TransactionService {
                 .map(this::mapToTransactionDto);
     }
 
+    @Transactional
+    public BankAccountDto renameAccount(Long userId, Long accountId, RenameBankAccountRequest request) {
+        BankAccount account = getOwnedAccount(userId, accountId);
+        account.setAccountName(request.getAccountName().trim());
+        return mapToAccountDto(account);
+    }
+
+    @Transactional
+    public void deleteAccount(Long userId, Long accountId) {
+        bankAccountRepository.delete(getOwnedAccount(userId, accountId));
+    }
+
+    @Transactional
+    public TransactionDto updateCategory(Long userId, Long transactionId, UpdateTransactionCategoryRequest request) {
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .filter(t -> t.getBankAccount().getUser().getId().equals(userId))
+                .orElseThrow(() -> new NotFoundException("Transaction not found"));
+
+        if (request.getCategoryId() == null) {
+            transaction.setCategory(null);
+        } else {
+            transaction.setCategory(categoryService.getVisible(userId, request.getCategoryId()));
+        }
+        transaction.setCategoryManual(true);
+        return mapToTransactionDto(transaction);
+    }
+
+    @Transactional
+    public RecategorizeResultDto recategorize(Long userId) {
+        List<Transaction> transactions = transactionRepository.findAllAutoCategorizedByUserId(userId);
+        int changed = 0;
+        for (Transaction transaction : transactions) {
+            Category category = categorizationEngine.categorize(userId, transaction.getTitle(), transaction.getRecipient())
+                    .map(CategorizationRule::getCategory)
+                    .orElse(null);
+            if (!Objects.equals(categoryId(category), categoryId(transaction.getCategory()))) {
+                transaction.setCategory(category);
+                changed++;
+            }
+        }
+        return new RecategorizeResultDto(transactions.size(), changed);
+    }
+
+    private BankAccount getOwnedAccount(Long userId, Long accountId) {
+        return bankAccountRepository.findById(accountId)
+                .filter(account -> account.getUser().getId().equals(userId))
+                .orElseThrow(() -> new NotFoundException("Bank account not found"));
+    }
+
+    private static Long categoryId(Category category) {
+        return category != null ? category.getId() : null;
+    }
+
     private BankAccountDto mapToAccountDto(BankAccount account) {
         return BankAccountDto.builder()
                 .id(account.getId())
@@ -138,13 +191,16 @@ public class TransactionService {
         return TransactionDto.builder()
                 .id(tx.getId())
                 .accountId(tx.getBankAccount().getId())
+                .accountName(tx.getBankAccount().getAccountName())
                 .date(tx.getTransactionDate())
                 .amount(tx.getOriginalAmount())
                 .currency(tx.getOriginalCurrency())
                 .amountInPln(tx.getAmountInPln())
                 .title(tx.getTitle())
                 .recipient(tx.getRecipient())
+                .categoryId(tx.getCategory() != null ? tx.getCategory().getId() : null)
                 .categoryName(tx.getCategory() != null ? tx.getCategory().getName() : null)
+                .categoryManual(tx.isCategoryManual())
                 .build();
     }
 }

@@ -3,7 +3,9 @@ package pl.minibank.currency.service;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import pl.minibank.common.exception.BadRequestException;
+import pl.minibank.common.exception.ServiceUnavailableException;
 import pl.minibank.currency.dto.NbpRateResponseDto;
 import pl.minibank.currency.entity.ExchangeRate;
 import pl.minibank.currency.repository.ExchangeRateRepository;
@@ -60,6 +62,9 @@ public class NbpCurrencyService {
                     return rate;
                 }
             } catch (HttpClientErrorException.NotFound e) {
+                continue;
+            } catch (RestClientException e) {
+                throw new ServiceUnavailableException("NBP exchange rate service is unavailable, try again later");
             }
         }
 

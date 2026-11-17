@@ -13,7 +13,9 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import pl.minibank.transaction.dto.ImportResultDto;
+import pl.minibank.transaction.dto.RecategorizeResultDto;
 import pl.minibank.transaction.dto.TransactionDto;
+import pl.minibank.transaction.dto.UpdateTransactionCategoryRequest;
 import pl.minibank.transaction.service.TransactionService;
 import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDate;
@@ -53,6 +55,21 @@ public class TransactionController {
                 userId, startDate, endDate, categoryId, accountId, pageable);
         
         return ResponseEntity.ok(result);
+    }
+
+    @PatchMapping("/transactions/{id}/category")
+    public ResponseEntity<TransactionDto> updateCategory(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") Long transactionId,
+            @RequestBody UpdateTransactionCategoryRequest request) {
+        Long userId = Long.valueOf(jwt.getSubject());
+        return ResponseEntity.ok(transactionService.updateCategory(userId, transactionId, request));
+    }
+
+    @PostMapping("/transactions/recategorize")
+    public ResponseEntity<RecategorizeResultDto> recategorize(@AuthenticationPrincipal Jwt jwt) {
+        Long userId = Long.valueOf(jwt.getSubject());
+        return ResponseEntity.ok(transactionService.recategorize(userId));
     }
 }
 

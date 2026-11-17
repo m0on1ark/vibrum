@@ -1,0 +1,2 @@
+ALTER TABLE transactions
+    ADD COLUMN category_manual BOOLEAN NOT NULL DEFAULT FALSE;

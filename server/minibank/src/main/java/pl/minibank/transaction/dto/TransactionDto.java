@@ -10,11 +10,14 @@ import java.time.LocalDate;
 public class TransactionDto {
     private Long id;
     private Long accountId;
+    private String accountName;
     private LocalDate date;
     private BigDecimal amount;
     private String currency;
     private BigDecimal amountInPln;
     private String title;
     private String recipient;
+    private Long categoryId;
     private String categoryName;
+    private boolean categoryManual;
 }
