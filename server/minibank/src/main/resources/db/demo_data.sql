@@ -77,7 +77,14 @@ VALUES
 ON CONFLICT (user_id, category_id, month_year) DO UPDATE
 SET limit_amount = EXCLUDED.limit_amount;
 
--- 5. Synchronize Sequences with manually inserted IDs
+-- 5. Payer's own share is already paid
+UPDATE expense_splits s
+SET is_settled = TRUE
+FROM shared_expenses e
+WHERE s.expense_id = e.id
+  AND s.user_id = e.paid_by;
+
+-- 6. Synchronize Sequences with manually inserted IDs
 SELECT setval('users_id_seq',           COALESCE((SELECT max(id) FROM users), 1));
 SELECT setval('expense_groups_id_seq',  COALESCE((SELECT max(id) FROM expense_groups), 1));
 SELECT setval('shared_expenses_id_seq', COALESCE((SELECT max(id) FROM shared_expenses), 1));

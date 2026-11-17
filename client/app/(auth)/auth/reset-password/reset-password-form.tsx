@@ -1,13 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import { resetPasswordAction } from "@/app/(auth)/auth/reset-password/actions";
 import { PasswordInput } from "@/components/auth/password-input";
+import { useFormAction } from "@/hooks/use-form-action";
+import { SubmitButton } from "@/components/submit-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,10 +22,9 @@ import { APP_PATHS } from "@/constants";
 import {
   resetPasswordSchema,
   type ResetPasswordInput,
-} from "@/lib/auth-schema";
+} from "@/lib/auth/schema";
 
 export function ResetPasswordForm({ token }: { token: string | undefined }) {
-  const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const form = useForm<ResetPasswordInput>({
     resolver: zodResolver(resetPasswordSchema),
@@ -32,19 +32,12 @@ export function ResetPasswordForm({ token }: { token: string | undefined }) {
   });
   const { isSubmitting } = form.formState;
 
-  async function onSubmit(values: ResetPasswordInput) {
-    setError(null);
-    try {
-      const result = await resetPasswordAction(token ?? "", values);
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
+  const { submit, error } = useFormAction(
+    (values: ResetPasswordInput) => resetPasswordAction(token ?? "", values),
+    () => {
       setDone(true);
-    } catch {
-      setError("Could not reach the server. Please try again.");
-    }
-  }
+    },
+  );
 
   if (!token) {
     return (
@@ -87,7 +80,7 @@ export function ResetPasswordForm({ token }: { token: string | undefined }) {
           </Button>
         </div>
       ) : (
-        <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+        <form onSubmit={form.handleSubmit(submit)} noValidate>
           <FieldGroup>
             {error ? (
               <Alert variant="destructive">
@@ -145,21 +138,9 @@ export function ResetPasswordForm({ token }: { token: string | undefined }) {
               )}
             />
 
-            <Button
-              type="submit"
-              size="lg"
-              className="h-11 text-base"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="animate-spin" />
-                  Zapisywanie…
-                </>
-              ) : (
-                "Zapisz hasło"
-              )}
-            </Button>
+            <SubmitButton pending={isSubmitting} pendingLabel="Zapisywanie…">
+              Zapisz hasło
+            </SubmitButton>
           </FieldGroup>
         </form>
       )}

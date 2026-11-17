@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 
 import { APP_PATHS } from "@/constants";
 import { API_PATHS, apiUrl } from "@/constants/api-paths";
-import { REFRESH_TOKEN_COOKIE } from "@/lib/auth-cookies";
-import { clearAuthCookies, getRefreshToken } from "@/lib/server-auth";
+import { REFRESH_TOKEN_COOKIE } from "@/lib/auth/cookies";
+import { clearAuthCookies, getRefreshToken } from "@/lib/auth/server";
 
 export async function signOutAction() {
   const refreshToken = await getRefreshToken();

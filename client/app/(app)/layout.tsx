@@ -1,26 +1,38 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { signOutAction } from "@/app/(app)/actions";
 import { Brand } from "@/components/auth/brand";
 import { Button } from "@/components/ui/button";
 import { APP_PATHS } from "@/constants";
 
+import { AppNav } from "./app-nav";
+import { NotificationsBell } from "./notifications-bell";
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-svh flex-1 flex-col">
       <header className="border-b bg-background">
-        <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-6">
-          <Link href={APP_PATHS.home} className="text-primary">
+        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6 lg:h-16 lg:flex-nowrap lg:py-0">
+          <Link href={APP_PATHS.home} className="shrink-0 text-primary">
             <Brand size="sm" />
           </Link>
-          <form action={signOutAction}>
-            <Button type="submit" variant="outline">
-              Wyloguj się
-            </Button>
-          </form>
+          <Suspense>
+            <AppNav />
+          </Suspense>
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <Suspense>
+              <NotificationsBell />
+            </Suspense>
+            <form action={signOutAction}>
+              <Button type="submit" variant="outline">
+                Wyloguj się
+              </Button>
+            </form>
+          </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
         {children}
       </main>
     </div>

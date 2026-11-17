@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { ACCESS_TOKEN_COOKIE } from "./auth-cookies";
+import { ACCESS_TOKEN_COOKIE } from "@/lib/auth/cookies";
 
 export async function fetchWithAuth(
   url: string,

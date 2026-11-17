@@ -167,6 +167,20 @@ class SubscriptionApiTests {
     }
 
     @Test
+    void categoryIsFoundByTitleWhenRecipientHasNoRule() throws Exception {
+        LocalDate lastPayment = LocalDate.now().minusDays(5);
+        when(paymentSource.findPayments(anyLong())).thenReturn(List.of(
+                payment(lastPayment.minusMonths(2), "-43.00", "NETFLIX.COM", "Media Services Ltd"),
+                payment(lastPayment.minusMonths(1), "-43.00", "NETFLIX.COM", "Media Services Ltd"),
+                payment(lastPayment, "-43.00", "NETFLIX.COM", "Media Services Ltd")));
+
+        mockMvc.perform(post("/api/subscriptions/detect").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].merchant").value("Media Services Ltd"))
+                .andExpect(jsonPath("$[0].categoryName").value("Subskrypcje"));
+    }
+
+    @Test
     void requiresAuthentication() throws Exception {
         mockMvc.perform(get("/api/subscriptions")).andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/subscriptions/detect")).andExpect(status().isUnauthorized());
@@ -179,6 +193,10 @@ class SubscriptionApiTests {
                 .andReturn().getResponse().getContentAsString();
         Number id = JsonPath.read(response, "$[0].id");
         return id.longValue();
+    }
+
+    private static PaymentRecord payment(LocalDate date, String amount, String title, String recipient) {
+        return new PaymentRecord(date, new BigDecimal(amount), "PLN", title, recipient);
     }
 
     private static PaymentRecord newspaper(LocalDate date) {

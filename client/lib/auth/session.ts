@@ -1,6 +1,6 @@
 import { API_PATHS, apiUrl } from "@/constants/api-paths";
-import { REFRESH_TOKEN_COOKIE } from "./auth-cookies";
-import type { AuthTokenResponse } from "./auth-schema";
+import { REFRESH_TOKEN_COOKIE } from "@/lib/auth/cookies";
+import type { AuthTokenResponse } from "@/lib/auth/schema";
 
 export type RefreshCookie = { value: string; maxAge: number | null };
 

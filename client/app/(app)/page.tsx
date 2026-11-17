@@ -1,12 +1,10 @@
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { LoadError } from "@/components/load-error";
 import { Skeleton } from "@/components/ui/skeleton";
-import { APP_PATHS } from "@/constants";
-import { API_PATHS, apiUrl } from "@/constants/api-paths";
-import type { CurrentUser } from "@/lib/auth-schema";
-import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import { API_PATHS } from "@/constants/api-paths";
+import type { CurrentUser } from "@/lib/auth/schema";
+import { getJson } from "@/lib/shared/get-json";
 
 export default function HomePage() {
   return (
@@ -17,27 +15,8 @@ export default function HomePage() {
 }
 
 async function Welcome() {
-  let response: Response;
-  try {
-    response = await fetchWithAuth(apiUrl(API_PATHS.users.me));
-  } catch {
-    return <LoadError />;
-  }
-
-  if (response.status === 401) redirect(APP_PATHS.sessionExpired);
-  if (!response.ok) return <LoadError />;
-
-  const user = (await response.json()) as CurrentUser;
+  const user = await getJson<CurrentUser>(API_PATHS.users.me);
+  if (!user) return <LoadError subject="account details" />;
 
   return <p className="text-muted-foreground">{user.displayName}</p>;
-}
-
-function LoadError() {
-  return (
-    <Alert variant="destructive" className="max-w-md">
-      <AlertDescription>
-        Could not load account details. Refresh the page in a moment.
-      </AlertDescription>
-    </Alert>
-  );
 }

@@ -2,10 +2,10 @@ import { headers } from "next/headers";
 
 import { apiUrl } from "@/constants/api-paths";
 
-import { readApiError } from "./api-error";
-import type { AuthTokenResponse } from "./auth-schema";
-import { readRefreshCookie } from "./refresh-session";
-import { setSessionCookies } from "./server-auth";
+import { readApiError } from "@/lib/shared/api-error";
+import type { AuthTokenResponse } from "@/lib/auth/schema";
+import { readRefreshCookie } from "@/lib/auth/session";
+import { setSessionCookies } from "@/lib/auth/server";
 
 export async function requestAuthToken(path: string, body: unknown) {
   const headerStore = await headers();
