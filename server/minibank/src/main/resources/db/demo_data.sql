@@ -68,20 +68,12 @@ VALUES
     (410, 303, 103, 60.0000, NULL, FALSE)
 ON CONFLICT (id) DO NOTHING;
 
--- 4. Budgets for Alice (Current Month)
--- Ensure system/demo categories exist
-INSERT INTO categories (id, user_id, name, type)
-VALUES
-    (501, 101, 'Jedzenie i Gastronomia', 'EXPENSE'),
-    (502, 101, 'Rozrywka i Wyjazdy', 'EXPENSE'),
-    (503, 101, 'Transport i Paliwo', 'EXPENSE')
-ON CONFLICT (id) DO NOTHING;
-
+-- 4. Budgets for Alice (Current Month) - assigned to system categories
 INSERT INTO budgets (user_id, category_id, month_year, limit_amount, currency)
 VALUES
-    (101, 501, DATE_TRUNC('month', CURRENT_DATE)::DATE, 1200.0000, 'PLN'),
-    (101, 502, DATE_TRUNC('month', CURRENT_DATE)::DATE, 600.0000, 'PLN'),
-    (101, 503, DATE_TRUNC('month', CURRENT_DATE)::DATE, 400.0000, 'PLN')
+    (101, (SELECT id FROM categories WHERE lower(name) = 'spożywcze' AND user_id IS NULL), DATE_TRUNC('month', CURRENT_DATE)::DATE, 1200.0000, 'PLN'),
+    (101, (SELECT id FROM categories WHERE lower(name) = 'restauracje' AND user_id IS NULL), DATE_TRUNC('month', CURRENT_DATE)::DATE, 600.0000, 'PLN'),
+    (101, (SELECT id FROM categories WHERE lower(name) = 'transport' AND user_id IS NULL), DATE_TRUNC('month', CURRENT_DATE)::DATE, 400.0000, 'PLN')
 ON CONFLICT (user_id, category_id, month_year) DO UPDATE
 SET limit_amount = EXCLUDED.limit_amount;
 

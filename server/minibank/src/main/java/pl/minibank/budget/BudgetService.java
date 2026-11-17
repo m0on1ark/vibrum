@@ -9,6 +9,7 @@ import pl.minibank.budget.dto.CreateBudgetRequest;
 import pl.minibank.budget.dto.UpdateBudgetRequest;
 import pl.minibank.category.Category;
 import pl.minibank.category.CategoryRepository;
+import pl.minibank.category.CategoryType;
 import pl.minibank.common.exception.BadRequestException;
 import pl.minibank.common.exception.ConflictException;
 import pl.minibank.common.exception.NotFoundException;
@@ -38,6 +39,10 @@ public class BudgetService {
         Category category = categoryRepository.findById(request.categoryId())
                 .filter(c -> c.getUser() == null || c.getUser().getId().equals(currentUserId))
                 .orElseThrow(() -> new NotFoundException("Category not found with id: " + request.categoryId()));
+
+        if (category.getType() != CategoryType.EXPENSE) {
+            throw new BadRequestException("Budgets can only be created for EXPENSE categories");
+        }
 
         LocalDate normalizedMonth = request.monthYear().withDayOfMonth(1);
 

@@ -20,10 +20,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     @EntityGraph(attributePaths = {"category", "bankAccount"})
     Page<Transaction> findAllByBankAccountUserId(Long userId, Pageable pageable);
 
-    @Query("SELECT COALESCE(SUM(CASE WHEN t.amountInPln < 0 THEN -t.amountInPln ELSE t.amountInPln END), 0) " +
+    @Query("SELECT COALESCE(SUM(-t.amountInPln), 0) " +
            "FROM Transaction t " +
            "WHERE t.bankAccount.user.id = :userId " +
            "AND t.category.id = :categoryId " +
+           "AND t.amountInPln < 0 " +
            "AND t.transactionDate >= :startDate " +
            "AND t.transactionDate <= :endDate")
     BigDecimal sumSpentByUserIdAndCategoryIdAndDateBetween(
