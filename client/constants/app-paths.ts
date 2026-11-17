@@ -1,5 +1,8 @@
 export const APP_PATHS = {
   home: "/",
+  transactions: "/transactions",
+  categories: "/categories",
+  groups: "/groups",
   signIn: "/auth/sign-in",
   signUp: "/auth/sign-up",
   forgotPassword: "/auth/forgot-password",
