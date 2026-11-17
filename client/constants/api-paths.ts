@@ -22,8 +22,14 @@ export const API_PATHS = {
     expenses: (groupId: number) => `/api/groups/${groupId}/expenses`,
     balances: (groupId: number) => `/api/groups/${groupId}/balances`,
     settlements: (groupId: number) => `/api/groups/${groupId}/settlements`,
+    invitations: (groupId: number) => `/api/groups/${groupId}/invitations`,
     settleSplit: (splitId: number) =>
       `/api/groups/expenses/splits/${splitId}/settle`,
+  },
+  invitations: {
+    root: "/api/invitations",
+    accept: (id: number) => `/api/invitations/${id}/accept`,
+    decline: (id: number) => `/api/invitations/${id}/decline`,
   },
 } as const;
 

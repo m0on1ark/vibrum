@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { APP_PATHS } from "@/constants";
 
 import { AppNav } from "./app-nav";
+import { NotificationsBell } from "./notifications-bell";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -20,6 +21,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <AppNav />
           </Suspense>
           <div className="ml-auto flex shrink-0 items-center gap-2">
+            <Suspense>
+              <NotificationsBell />
+            </Suspense>
             <form action={signOutAction}>
               <Button type="submit" variant="outline">
                 Wyloguj się
