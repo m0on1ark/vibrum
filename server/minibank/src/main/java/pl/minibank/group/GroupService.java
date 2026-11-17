@@ -84,6 +84,10 @@ public class GroupService {
         ExpenseGroup group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new NotFoundException("Expense group not found with id: " + groupId));
 
+        if (!group.getCreatedBy().getId().equals(currentUserId)) {
+            throw new ForbiddenException("Only the group creator can directly add members");
+        }
+
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         User userToAdd = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new NotFoundException("User with email " + request.email() + " not found"));

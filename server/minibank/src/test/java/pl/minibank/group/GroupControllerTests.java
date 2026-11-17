@@ -347,6 +347,29 @@ class GroupControllerTests {
                 .andExpect(jsonPath("$", hasSize(0)));
     }
 
+    @Test
+    void nonCreatorCannotDirectlyAddMember_returnsForbidden403() throws Exception {
+        String aliceToken = register(uniqueEmail("alice"), "password123", "Alice");
+        Long groupId = createGroup(aliceToken, "Secret Society");
+
+        String bobEmail = uniqueEmail("bob");
+        String bobToken = register(bobEmail, "password123", "Bob");
+        addMember(aliceToken, groupId, bobEmail);
+
+        String charlieEmail = uniqueEmail("charlie");
+        register(charlieEmail, "password123", "Charlie");
+
+        // Bob is a member, but NOT the creator. Direct addMember must return 403 Forbidden.
+        mockMvc.perform(post("/api/groups/" + groupId + "/members")
+                        .header("Authorization", "Bearer " + bobToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "%s"}
+                                """.formatted(charlieEmail)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.detail").value("Only the group creator can directly add members"));
+    }
+
     private Long createGroup(String token, String name) throws Exception {
         String response = mockMvc.perform(post("/api/groups")
                         .header("Authorization", "Bearer " + token)
