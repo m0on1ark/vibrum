@@ -104,6 +104,40 @@ class ProfileApiTests {
     }
 
     @Test
+    void savesNormalizedIbanAndClearsIt() throws Exception {
+        String token = accessToken(register(uniqueEmail()));
+
+        update(token, """
+                {"iban": "pl07 1090 1014 0000 0000 0000 0001"}
+                """)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.iban").value("PL07109010140000000000000001"));
+        update(token, """
+                {"iban": "07109010140000000000000001"}
+                """)
+                .andExpect(jsonPath("$.iban").value("PL07109010140000000000000001"));
+        update(token, """
+                {"iban": ""}
+                """)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.iban").doesNotExist());
+    }
+
+    @Test
+    void rejectsIbanWithWrongChecksum() throws Exception {
+        String token = accessToken(register(uniqueEmail()));
+
+        update(token, """
+                {"iban": "PL68109010140000000000000001"}
+                """)
+                .andExpect(status().isBadRequest());
+        update(token, """
+                {"iban": "DE89370400440532013000"}
+                """)
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void requiresAuthentication() throws Exception {
         mockMvc.perform(patch("/api/users/me").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isUnauthorized());

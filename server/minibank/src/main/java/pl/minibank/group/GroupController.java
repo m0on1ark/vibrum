@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import pl.minibank.group.dto.AddMemberRequest;
@@ -22,6 +23,7 @@ import pl.minibank.group.dto.CreateExpenseRequest;
 import pl.minibank.group.dto.CreateGroupRequest;
 import pl.minibank.group.dto.ExpenseResponse;
 import pl.minibank.group.dto.GroupResponse;
+import pl.minibank.group.dto.PaymentDetailsResponse;
 import pl.minibank.group.dto.GroupSummaryResponse;
 import pl.minibank.group.dto.MemberResponse;
 import pl.minibank.group.dto.TransferResponse;
@@ -135,6 +137,16 @@ public class GroupController {
             @AuthenticationPrincipal Jwt jwt
     ) {
         return settlementService.getSettlements(groupId, currentUserId(jwt));
+    }
+
+    @GetMapping("/{groupId}/settlements/payment")
+    @Operation(summary = "Get bank transfer details", description = "Returns the recipient's IBAN, amount and a Polish bank QR payload for the caller's transfer from the settlement plan.")
+    public PaymentDetailsResponse getPaymentDetails(
+            @PathVariable Long groupId,
+            @RequestParam Long toUserId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return settlementService.getPaymentDetails(groupId, currentUserId(jwt), toUserId);
     }
 
     @PatchMapping("/expenses/splits/{splitId}/settle")
