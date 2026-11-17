@@ -56,6 +56,22 @@ export type MemberBalance = {
   netBalance: number;
 };
 
+export type GroupInvitation = {
+  id: number;
+  groupId: number;
+  groupName: string;
+  invitedByDisplayName: string;
+  status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED";
+  createdAt: string;
+  expiresAt: string | null;
+};
+
+export function isInvitationActive(invitation: GroupInvitation, now = Date.now()) {
+  if (invitation.status !== "PENDING") return false;
+  if (!invitation.expiresAt) return true;
+  return Date.parse(invitation.expiresAt) > now;
+}
+
 export type SettlementTransfer = {
   fromUserId: number;
   fromDisplayName: string;

@@ -4,13 +4,28 @@ import { APP_PATHS, INVALID_INPUTS_MESSAGE } from "@/constants";
 import { API_PATHS } from "@/constants/api-paths";
 import {
   createExpenseSchema,
+  inviteMemberSchema,
   type CreateExpenseInput,
+  type InviteMemberInput,
   type SplitEntryInput,
 } from "@/lib/groups/schema";
 import { callApi } from "@/lib/shared/call-api";
 
 function groupPath(groupId: number) {
   return `${APP_PATHS.groups}/${groupId}`;
+}
+
+export async function inviteMemberAction(
+  groupId: number,
+  input: InviteMemberInput,
+) {
+  const parsed = inviteMemberSchema.safeParse(input);
+  if (!parsed.success) return { error: INVALID_INPUTS_MESSAGE };
+
+  const { error } = await callApi(API_PATHS.groups.invitations(groupId), {
+    body: parsed.data,
+  });
+  return { error };
 }
 
 export async function removeMemberAction(groupId: number, userId: number) {

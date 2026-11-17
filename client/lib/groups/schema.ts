@@ -14,6 +14,10 @@ export const createGroupSchema = z.object({
     .max(500, "Description must be at most 500 characters"),
 });
 
+export const inviteMemberSchema = z.object({
+  email: z.email("Enter a valid email address"),
+});
+
 export const createExpenseSchema = z.object({
   title: z
     .string()
@@ -29,6 +33,7 @@ export const createExpenseSchema = z.object({
 });
 
 export type CreateGroupInput = z.infer<typeof createGroupSchema>;
+export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 
 export type SplitEntryInput = {
