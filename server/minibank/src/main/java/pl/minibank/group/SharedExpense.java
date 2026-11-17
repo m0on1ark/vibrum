@@ -51,12 +51,19 @@ public class SharedExpense extends BaseEntity {
     @Column(name = "split_mode", nullable = false, length = 10)
     private SplitMode splitMode;
 
+    @Column(name = "exchange_rate", nullable = false, precision = 19, scale = 6)
+    private BigDecimal exchangeRate;
+
+    @Column(name = "amount_in_pln", nullable = false, precision = 19, scale = 4)
+    private BigDecimal amountInPln;
+
     @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExpenseSplit> splits = new ArrayList<>();
 
     public SharedExpense(ExpenseGroup group, User paidBy, String title,
                          BigDecimal amount, String currency,
-                         LocalDate expenseDate, SplitMode splitMode) {
+                         LocalDate expenseDate, SplitMode splitMode,
+                         BigDecimal exchangeRate, BigDecimal amountInPln) {
         this.group = group;
         this.paidBy = paidBy;
         this.title = title;
@@ -64,6 +71,14 @@ public class SharedExpense extends BaseEntity {
         this.currency = currency;
         this.expenseDate = expenseDate;
         this.splitMode = splitMode;
+        this.exchangeRate = exchangeRate;
+        this.amountInPln = amountInPln;
+    }
+
+    public SharedExpense(ExpenseGroup group, User paidBy, String title,
+                         BigDecimal amount, String currency,
+                         LocalDate expenseDate, SplitMode splitMode) {
+        this(group, paidBy, title, amount, currency, expenseDate, splitMode, BigDecimal.ONE, amount);
     }
 
     public void addSplit(ExpenseSplit split) {

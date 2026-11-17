@@ -32,6 +32,7 @@ export type SplitLine = {
   displayName: string;
   shareAmount: number;
   sharePercent: number | null;
+  shareAmountInPln: number;
   settled: boolean;
 };
 
@@ -43,6 +44,8 @@ export type GroupExpense = {
   title: string;
   amount: number;
   currency: string;
+  exchangeRate: number;
+  amountInPln: number;
   expenseDate: string;
   splitMode: SplitMode;
   splits: SplitLine[];

@@ -107,7 +107,7 @@ async function GroupContent({
           <BalancesTab balances={balances} currentUserId={me.id} />
         </TabsContent>
         <TabsContent value="settlements" className="grid gap-3 pt-4">
-          <SettlementsTab settlements={settlements} />
+          <SettlementsTab settlements={settlements} currentUserId={me.id} />
         </TabsContent>
         <TabsContent value="members" className="grid gap-6 pt-4">
           <MembersTab group={details} currentUserId={me.id} />

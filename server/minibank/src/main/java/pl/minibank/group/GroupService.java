@@ -7,6 +7,7 @@ import pl.minibank.common.exception.BadRequestException;
 import pl.minibank.common.exception.ConflictException;
 import pl.minibank.common.exception.ForbiddenException;
 import pl.minibank.common.exception.NotFoundException;
+import pl.minibank.currency.service.NbpCurrencyService;
 import pl.minibank.group.dto.AddMemberRequest;
 import pl.minibank.group.dto.BalanceResponse;
 import pl.minibank.group.dto.CreateExpenseRequest;
@@ -20,6 +21,7 @@ import pl.minibank.user.User;
 import pl.minibank.user.UserRepository;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +38,7 @@ public class GroupService {
     private final SharedExpenseRepository expenseRepository;
     private final ExpenseSplitRepository splitRepository;
     private final UserRepository userRepository;
+    private final NbpCurrencyService nbpCurrencyService;
     private final SplitCalculator splitCalculator = new SplitCalculator();
 
     @Transactional
@@ -154,14 +157,13 @@ public class GroupService {
         }
         User payer = memberUsers.get(payerId);
 
-        // Currency validation: only PLN is currently supported
+        // Determine currency and exchange rate to PLN
         String currency = (request.currency() != null && !request.currency().isBlank())
                 ? request.currency().trim().toUpperCase(Locale.ROOT)
                 : "PLN";
 
-        if (!"PLN".equals(currency)) {
-            throw new BadRequestException("Only PLN currency is currently supported");
-        }
+        BigDecimal exchangeRate = nbpCurrencyService.getExchangeRateToPln(currency, request.expenseDate());
+        BigDecimal amountInPln = request.amount().multiply(exchangeRate).setScale(2, RoundingMode.HALF_UP);
 
         SharedExpense expense = new SharedExpense(
                 group,
@@ -170,18 +172,37 @@ public class GroupService {
                 request.amount(),
                 currency,
                 request.expenseDate(),
-                request.splitMode()
+                request.splitMode(),
+                exchangeRate,
+                amountInPln
         );
 
         List<SplitCalculator.SplitResult> calculatedSplits = calculateSplits(request, memberUsers);
 
+        // Calculate PLN share for each split, distributing any penny rounding difference to the first split
+        List<BigDecimal> plnShares = new ArrayList<>();
+        BigDecimal sumPlnShares = BigDecimal.ZERO;
         for (SplitCalculator.SplitResult splitResult : calculatedSplits) {
+            BigDecimal plnShare = splitResult.shareAmount().multiply(exchangeRate).setScale(2, RoundingMode.HALF_UP);
+            plnShares.add(plnShare);
+            sumPlnShares = sumPlnShares.add(plnShare);
+        }
+
+        BigDecimal diff = amountInPln.subtract(sumPlnShares);
+        if (diff.compareTo(BigDecimal.ZERO) != 0 && !plnShares.isEmpty()) {
+            plnShares.set(0, plnShares.get(0).add(diff));
+        }
+
+        for (int i = 0; i < calculatedSplits.size(); i++) {
+            SplitCalculator.SplitResult splitResult = calculatedSplits.get(i);
+            BigDecimal shareAmountInPln = plnShares.get(i);
             User splitUser = memberUsers.get(splitResult.userId());
             ExpenseSplit split = new ExpenseSplit(
                     expense,
                     splitUser,
                     splitResult.shareAmount(),
-                    splitResult.sharePercent()
+                    splitResult.sharePercent(),
+                    shareAmountInPln
             );
             if (splitUser.getId().equals(payer.getId())) {
                 split.markSettled();
@@ -219,8 +240,8 @@ public class GroupService {
                     Long debtorId = split.getUser().getId();
                     Long creditorId = expense.getPaidBy().getId();
 
-                    netBalances.merge(debtorId, split.getShareAmount().negate(), BigDecimal::add);
-                    netBalances.merge(creditorId, split.getShareAmount(), BigDecimal::add);
+                    netBalances.merge(debtorId, split.getShareAmountInPln().negate(), BigDecimal::add);
+                    netBalances.merge(creditorId, split.getShareAmountInPln(), BigDecimal::add);
                 }
             }
         }
