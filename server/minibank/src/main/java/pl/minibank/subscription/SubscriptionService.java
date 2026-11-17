@@ -69,7 +69,7 @@ public class SubscriptionService {
         User user = userRepository.getReferenceById(userId);
         subscriptionRepository.deleteAllByUserId(userId);
         for (SubscriptionDetector.DetectedPattern pattern : patterns) {
-            var category = categorizationEngine.categorize(userId, pattern.merchant(), null)
+            var category = categorizationEngine.categorize(userId, pattern.title(), pattern.merchant())
                     .map(CategorizationRule::getCategory)
                     .orElse(null);
             subscriptionRepository.save(new DetectedSubscription(user, category, pattern));
