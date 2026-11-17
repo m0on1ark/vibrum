@@ -1,6 +1,5 @@
 package pl.minibank.currency.service;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
@@ -14,11 +13,15 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class NbpCurrencyService {
 
     private final ExchangeRateRepository exchangeRateRepository;
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
+
+    public NbpCurrencyService(ExchangeRateRepository exchangeRateRepository, RestClient.Builder restClientBuilder) {
+        this.exchangeRateRepository = exchangeRateRepository;
+        this.restClient = restClientBuilder.build();
+    }
 
     public BigDecimal getExchangeRateToPln(String currency, LocalDate date) {
         if ("PLN".equalsIgnoreCase(currency)) {
@@ -27,7 +30,6 @@ public class NbpCurrencyService {
 
         String cleanCurrency = currency.trim().toUpperCase();
 
-        // По требованиям NBP: курс берется за предыдущий рабочий день
         for (int i = 1; i <= 7; i++) {
             LocalDate targetDate = date.minusDays(i);
 
