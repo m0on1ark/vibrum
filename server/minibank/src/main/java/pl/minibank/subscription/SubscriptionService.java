@@ -1,7 +1,6 @@
 package pl.minibank.subscription;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.minibank.category.CategorizationEngine;
@@ -28,7 +27,7 @@ public class SubscriptionService {
     private final SubscriptionDismissalRepository dismissalRepository;
     private final UserRepository userRepository;
     private final CategorizationEngine categorizationEngine;
-    private final ObjectProvider<SubscriptionPaymentSource> paymentSource;
+    private final SubscriptionPaymentSource paymentSource;
     private final SubscriptionDetector detector = new SubscriptionDetector();
 
     @Transactional(readOnly = true)
@@ -61,7 +60,7 @@ public class SubscriptionService {
 
     @Transactional
     public List<SubscriptionResponse> detect(Long userId) {
-        List<PaymentRecord> payments = paymentSource.getIfAvailable(() -> id -> List.of()).findPayments(userId);
+        List<PaymentRecord> payments = paymentSource.findPayments(userId);
         List<SubscriptionDismissal> dismissals = dismissalRepository.findAllByUserId(userId);
         List<SubscriptionDetector.DetectedPattern> patterns = detector.detect(payments, LocalDate.now()).stream()
                 .filter(pattern -> dismissals.stream().noneMatch(dismissal -> dismissal.matches(pattern)))
