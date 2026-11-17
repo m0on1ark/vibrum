@@ -34,14 +34,22 @@ public class ExpenseSplit extends BaseEntity {
     @Column(name = "share_percent", precision = 6, scale = 3)
     private BigDecimal sharePercent;
 
+    @Column(name = "share_amount_in_pln", nullable = false, precision = 19, scale = 4)
+    private BigDecimal shareAmountInPln;
+
     @Column(name = "is_settled", nullable = false)
     private boolean settled = false;
 
-    public ExpenseSplit(SharedExpense expense, User user, BigDecimal shareAmount, BigDecimal sharePercent) {
+    public ExpenseSplit(SharedExpense expense, User user, BigDecimal shareAmount, BigDecimal sharePercent, BigDecimal shareAmountInPln) {
         this.expense = expense;
         this.user = user;
         this.shareAmount = shareAmount;
         this.sharePercent = sharePercent;
+        this.shareAmountInPln = shareAmountInPln;
+    }
+
+    public ExpenseSplit(SharedExpense expense, User user, BigDecimal shareAmount, BigDecimal sharePercent) {
+        this(expense, user, shareAmount, sharePercent, shareAmount);
     }
 
     public void markSettled() {

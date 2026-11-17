@@ -10,6 +10,7 @@ public record SplitLineResponse(
         String displayName,
         BigDecimal shareAmount,
         BigDecimal sharePercent,
+        BigDecimal shareAmountInPln,
         boolean settled
 ) {
     public static SplitLineResponse from(ExpenseSplit split) {
@@ -19,6 +20,7 @@ public record SplitLineResponse(
                 split.getUser().getDisplayName(),
                 split.getShareAmount(),
                 split.getSharePercent(),
+                split.getShareAmountInPln(),
                 split.isSettled()
         );
     }
