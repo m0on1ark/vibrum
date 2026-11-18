@@ -8,7 +8,7 @@ import { useRef, useState, useTransition } from "react";
 import { FormError } from "@/components/form-error";
 import { SubmitButton } from "@/components/submit-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { APP_PATHS, NETWORK_ERROR_MESSAGE } from "@/constants";
 import { validateStatementFile } from "@/lib/accounts/schema";
@@ -40,7 +40,7 @@ export function ImportStatementForm({
     return (
       <p className="text-sm text-muted-foreground">
         Import wyciągów nie jest obsługiwany dla kont miniBank (obsługiwane:
-        PKO BP CSV, mBank CSV, Revolut JSON).
+        PKO BP CSV, mBank CSV, Revolut CSV / JSON).
       </p>
     );
   }
@@ -142,6 +142,9 @@ export function ImportStatementForm({
             Importuj
           </SubmitButton>
         </div>
+        {formatMeta.hint ? (
+          <FieldDescription>{formatMeta.hint}</FieldDescription>
+        ) : null}
       </Field>
     </form>
   );

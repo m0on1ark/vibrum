@@ -82,3 +82,18 @@ export type SettlementTransfer = {
   toDisplayName: string;
   amount: number;
 };
+
+export type PaymentDetails = {
+  toUserId: number;
+  recipientName: string;
+  iban: string | null;
+  amount: number;
+  currency: string;
+  title: string;
+  qrPayload: string | null;
+};
+
+export function formatPolishIban(iban: string): string {
+  const compact = iban.replace(/\s+/g, "").toUpperCase();
+  return compact.replace(/(.{4})(?=.)/g, "$1 ");
+}

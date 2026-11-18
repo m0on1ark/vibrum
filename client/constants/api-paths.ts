@@ -58,6 +58,8 @@ export const API_PATHS = {
     expenses: (groupId: number) => `/api/groups/${groupId}/expenses`,
     balances: (groupId: number) => `/api/groups/${groupId}/balances`,
     settlements: (groupId: number) => `/api/groups/${groupId}/settlements`,
+    settlementPayment: (groupId: number, toUserId: number) =>
+      `/api/groups/${groupId}/settlements/payment?toUserId=${encodeURIComponent(toUserId)}`,
     invitations: (groupId: number) => `/api/groups/${groupId}/invitations`,
     settleSplit: (splitId: number) =>
       `/api/groups/expenses/splits/${splitId}/settle`,

@@ -1,6 +1,6 @@
 "use server";
 
-import { APP_PATHS, INVALID_INPUTS_MESSAGE } from "@/constants";
+import { APP_PATHS, INVALID_INPUTS_MESSAGE, NETWORK_ERROR_MESSAGE } from "@/constants";
 import { API_PATHS } from "@/constants/api-paths";
 import {
   createExpenseSchema,
@@ -9,6 +9,7 @@ import {
   type InviteMemberInput,
   type SplitEntryInput,
 } from "@/lib/groups/schema";
+import type { PaymentDetails } from "@/lib/groups/types";
 import { callApi } from "@/lib/shared/call-api";
 
 function groupPath(groupId: number) {
@@ -59,4 +60,21 @@ export async function settleSplitAction(groupId: number, splitId: number) {
     revalidate: [groupPath(groupId)],
   });
   return { error };
+}
+
+export async function getSettlementPaymentDetailsAction(
+  groupId: number,
+  toUserId: number,
+): Promise<{ data?: PaymentDetails; error?: string }> {
+  try {
+    const res = await callApi(
+      API_PATHS.groups.settlementPayment(groupId, toUserId),
+      { method: "GET" },
+    );
+    if (!res.ok) return { error: res.error };
+    const data = (await res.response.json()) as PaymentDetails;
+    return { data };
+  } catch {
+    return { error: NETWORK_ERROR_MESSAGE };
+  }
 }

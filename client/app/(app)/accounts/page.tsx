@@ -46,7 +46,7 @@ async function AccountsContent() {
           </h1>
           <p className="text-muted-foreground">
             Dodawaj konta i importuj wyciągi w formatach PKO BP (CSV), mBank
-            (CSV) oraz Revolut (JSON).
+            (CSV) oraz Revolut (CSV / JSON).
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

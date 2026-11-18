@@ -44,7 +44,7 @@ import { createAccountAction } from "./actions";
 const BANK_OPTION_DESCRIPTIONS: Record<BankType, string> = {
   PKO_BP: "PKO BP (wyciąg CSV)",
   MBANK: "mBank (wyciąg CSV)",
-  REVOLUT: "Revolut (wyciąg JSON)",
+  REVOLUT: "Revolut (wyciąg CSV / JSON)",
   MINIBANK: "miniBank (bez importu wyciągu)",
 };
 
