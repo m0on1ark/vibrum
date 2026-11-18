@@ -1,9 +1,8 @@
+import { User } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { signOutAction } from "@/app/(app)/actions";
 import { Brand } from "@/components/auth/brand";
-import { Button } from "@/components/ui/button";
 import { APP_PATHS } from "@/constants";
 
 import { AppNav } from "./app-nav";
@@ -24,11 +23,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Suspense>
               <NotificationsBell />
             </Suspense>
-            <form action={signOutAction}>
-              <Button type="submit" variant="outline">
-                Wyloguj się
-              </Button>
-            </form>
+            <Link
+              href={APP_PATHS.profile}
+              aria-label="Profil"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/40 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              <User className="size-5" />
+            </Link>
           </div>
         </div>
       </header>

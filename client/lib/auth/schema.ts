@@ -2,6 +2,12 @@ import { z } from "zod";
 
 const email = z.email("Enter a valid email address");
 
+const displayName = z
+  .string()
+  .trim()
+  .min(1, "Enter your name")
+  .max(100, "Name must be at most 100 characters");
+
 const newPassword = z
   .string()
   .min(8, "Password must be at least 8 characters")
@@ -27,11 +33,7 @@ export const signInSchema = z.object({
 });
 
 export const signUpSchema = z.object({
-  displayName: z
-    .string()
-    .trim()
-    .min(1, "Enter your name")
-    .max(100, "Name must be at most 100 characters"),
+  displayName,
   email,
   password: newPassword,
 });
@@ -50,11 +52,21 @@ export const changePasswordSchema = z
   })
   .refine(passwordsMatch, passwordsMatchIssue);
 
+export const updateProfileSchema = z.object({
+  displayName,
+  baseCurrency: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z]{3}$/, "Select a valid 3-letter currency code"),
+});
+
 export type SignInInput = z.infer<typeof signInSchema>;
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
 export type AuthTokenResponse = {
   accessToken: string;
