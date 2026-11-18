@@ -8,6 +8,7 @@ export type Transaction = {
   amount: number;
   currency: string;
   amountInPln: number;
+  exchangeRate?: number | null;
   title: string;
   recipient: string | null;
   categoryId: number | null;

@@ -35,6 +35,7 @@ export function ProfileForm({ user }: { user: CurrentUser }) {
     defaultValues: {
       displayName: user.displayName,
       baseCurrency: user.baseCurrency,
+      iban: user.iban ?? "",
     },
   });
   const { isSubmitting } = form.formState;
@@ -108,7 +109,36 @@ export function ProfileForm({ user }: { user: CurrentUser }) {
                 }}
               />
               <FieldDescription>
-                Domyślna waluta używana na koncie.
+                Domyślna waluta dla nowych kont oraz waluta przeliczeniowa (wg
+                kursu NBP) w całym serwisie.
+              </FieldDescription>
+              <FieldError errors={[fieldState.error]} />
+            </Field>
+          )}
+        />
+
+        <Controller
+          name="iban"
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="profile-iban">
+                Numer konta (IBAN)
+              </FieldLabel>
+              <Input
+                {...field}
+                id="profile-iban"
+                placeholder="PL00 0000 0000 0000 0000 0000 0000"
+                autoComplete="off"
+                aria-invalid={fieldState.invalid}
+                onChange={(event) => {
+                  field.onChange(event);
+                  setSaved(false);
+                }}
+              />
+              <FieldDescription>
+                Polski numer IBAN (26 cyfr) do kodów QR w rozliczeniach
+                grupowych. Pozostaw puste, aby usunąć.
               </FieldDescription>
               <FieldError errors={[fieldState.error]} />
             </Field>

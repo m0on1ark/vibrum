@@ -22,6 +22,12 @@ import {
 } from "@/components/ui/table";
 import { APP_PATHS } from "@/constants";
 import { useServerAction } from "@/hooks/use-server-action";
+import {
+  type BaseCurrencyContext,
+  DEFAULT_BASE_CURRENCY_CTX,
+  formatOriginalPln,
+  formatPrimaryFromPln,
+} from "@/lib/currencies/base-currency";
 import { formatDate, formatMoney } from "@/lib/shared/format";
 import { pluralPl } from "@/lib/shared/plural";
 import {
@@ -37,9 +43,11 @@ import { SubscriptionSummaryCards } from "./subscription-summary-cards";
 export function SubscriptionList({
   subscriptions,
   totals,
+  baseCurrencyCtx = DEFAULT_BASE_CURRENCY_CTX,
 }: {
   subscriptions: Subscription[];
   totals: SubscriptionTotal[];
+  baseCurrencyCtx?: BaseCurrencyContext;
 }) {
   const { run, pending, error } = useServerAction();
 
@@ -66,7 +74,10 @@ export function SubscriptionList({
 
   return (
     <div className="grid gap-6">
-      <SubscriptionSummaryCards totals={totals} />
+      <SubscriptionSummaryCards
+        totals={totals}
+        baseCurrencyCtx={baseCurrencyCtx}
+      />
 
       <InlineError message={error} />
 
@@ -83,56 +94,72 @@ export function SubscriptionList({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {subscriptions.map((sub) => (
-            <TableRow key={sub.id}>
-              <TableCell className="max-w-xs whitespace-normal">
-                <div className="font-medium">{sub.merchant}</div>
-                <div className="text-xs text-muted-foreground">
-                  {sub.occurrences}{" "}
-                  {pluralPl(
-                    sub.occurrences,
-                    "płatność",
-                    "płatności",
-                    "płatności",
+          {subscriptions.map((sub) => {
+            const isConvertedPln =
+              sub.currency === "PLN" && baseCurrencyCtx.baseCurrency !== "PLN";
+            const primaryAmount = isConvertedPln
+              ? formatPrimaryFromPln(sub.amount, baseCurrencyCtx)
+              : formatMoney(sub.amount, sub.currency);
+            const origAmount = isConvertedPln
+              ? formatOriginalPln(sub.amount, baseCurrencyCtx)
+              : null;
+
+            return (
+              <TableRow key={sub.id}>
+                <TableCell className="max-w-xs whitespace-normal">
+                  <div className="font-medium">{sub.merchant}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {sub.occurrences}{" "}
+                    {pluralPl(
+                      sub.occurrences,
+                      "płatność",
+                      "płatności",
+                      "płatności",
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {sub.categoryName ? (
+                    <Badge variant="secondary">{sub.categoryName}</Badge>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">
+                      Bez kategorii
+                    </span>
                   )}
-                </div>
-              </TableCell>
-              <TableCell>
-                {sub.categoryName ? (
-                  <Badge variant="secondary">{sub.categoryName}</Badge>
-                ) : (
-                  <span className="text-sm text-muted-foreground">
-                    Bez kategorii
-                  </span>
-                )}
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline">
-                  {BILLING_PERIOD_LABELS[sub.billingPeriod]}
-                </Badge>
-              </TableCell>
-              <TableCell className="whitespace-nowrap text-muted-foreground">
-                {formatDate(sub.lastPaymentDate)}
-              </TableCell>
-              <TableCell className="whitespace-nowrap text-muted-foreground">
-                {formatDate(sub.nextPaymentDate)}
-              </TableCell>
-              <TableCell className="text-right font-medium tabular-nums">
-                {formatMoney(sub.amount, sub.currency)}
-              </TableCell>
-              <TableCell className="text-right">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={pending}
-                  onClick={() => run(() => dismissSubscriptionAction(sub.id))}
-                >
-                  To nie subskrypcja
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline">
+                    {BILLING_PERIOD_LABELS[sub.billingPeriod]}
+                  </Badge>
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-muted-foreground">
+                  {formatDate(sub.lastPaymentDate)}
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-muted-foreground">
+                  {formatDate(sub.nextPaymentDate)}
+                </TableCell>
+                <TableCell className="text-right font-medium tabular-nums">
+                  <div>{primaryAmount}</div>
+                  {origAmount ? (
+                    <div className="text-xs font-normal text-muted-foreground">
+                      {origAmount}
+                    </div>
+                  ) : null}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => run(() => dismissSubscriptionAction(sub.id))}
+                  >
+                    To nie subskrypcja
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

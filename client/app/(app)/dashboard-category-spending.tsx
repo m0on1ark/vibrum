@@ -14,14 +14,18 @@ import {
 import { APP_PATHS } from "@/constants";
 import { API_PATHS } from "@/constants/api-paths";
 import {
-  ANALYTICS_CURRENCY,
   CATEGORY_CHART_COLORS,
   type CategorySpending,
   monthToDateRange,
   parseAnalyticsMonth,
 } from "@/lib/analytics/types";
 import { currentYearMonth, formatYearMonth } from "@/lib/budgets/types";
-import { formatMoney } from "@/lib/shared/format";
+import {
+  convertFromPln,
+  formatOriginalPln,
+  formatPrimaryFromPln,
+} from "@/lib/currencies/base-currency";
+import { getUserBaseCurrencyContext } from "@/lib/currencies/get-base-currency";
 import { getJson } from "@/lib/shared/get-json";
 
 import { DashboardCategoryChart } from "./dashboard-category-chart";
@@ -51,12 +55,23 @@ export async function DashboardCategorySpending({
   const month = parseAnalyticsMonth(params.month) ?? currentYearMonth();
   const { from, to } = monthToDateRange(month);
 
-  const items = await getJson<CategorySpending[]>(
-    `${API_PATHS.analytics.byCategory}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-  );
+  const [items, baseCurrencyCtx] = await Promise.all([
+    getJson<CategorySpending[]>(
+      `${API_PATHS.analytics.byCategory}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    ),
+    getUserBaseCurrencyContext(),
+  ]);
   if (!items) return <LoadError subject="category spending" />;
 
-  const totalExpenses = items.reduce((sum, item) => sum + item.amount, 0);
+  const totalExpensesPln = items.reduce((sum, item) => sum + item.amount, 0);
+  const convertedItems = items.map((item) => ({
+    ...item,
+    amount: convertFromPln(item.amount, baseCurrencyCtx),
+  }));
+  const convertedTotalExpenses = convertFromPln(
+    totalExpensesPln,
+    baseCurrencyCtx,
+  );
 
   return (
     <Card>
@@ -80,9 +95,10 @@ export async function DashboardCategorySpending({
         ) : (
           <div className="grid gap-6">
             <DashboardCategoryChart
-              items={items}
-              totalExpenses={totalExpenses}
+              items={convertedItems}
+              totalExpenses={convertedTotalExpenses}
               colors={CATEGORY_CHART_COLORS}
+              currency={baseCurrencyCtx.baseCurrency}
             />
 
             <ul className="grid gap-3">
@@ -94,6 +110,10 @@ export async function DashboardCategorySpending({
                   from,
                   to,
                   item.categoryId,
+                );
+                const amountOrig = formatOriginalPln(
+                  item.amount,
+                  baseCurrencyCtx,
                 );
 
                 return (
@@ -114,9 +134,16 @@ export async function DashboardCategorySpending({
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="font-medium tabular-nums">
-                        {formatMoney(item.amount, ANALYTICS_CURRENCY)}
-                      </span>
+                      <div className="text-right">
+                        <span className="font-medium tabular-nums">
+                          {formatPrimaryFromPln(item.amount, baseCurrencyCtx)}
+                        </span>
+                        {amountOrig ? (
+                          <div className="text-xs tabular-nums text-muted-foreground">
+                            {amountOrig}
+                          </div>
+                        ) : null}
+                      </div>
                       <Link
                         href={txHref}
                         aria-label={`Zobacz transakcje: ${name}`}

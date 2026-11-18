@@ -59,6 +59,14 @@ export const updateProfileSchema = z.object({
     .trim()
     .toUpperCase()
     .regex(/^[A-Z]{3}$/, "Select a valid 3-letter currency code"),
+  iban: z
+    .string()
+    .trim()
+    .max(50, "IBAN must be at most 50 characters")
+    .refine(
+      (val) => val === "" || /^(PL)?\d{26}$/i.test(val.replace(/[\s-]/g, "")),
+      "Enter a valid Polish IBAN (26 digits, optional PL prefix)",
+    ),
 });
 
 export type SignInInput = z.infer<typeof signInSchema>;
@@ -79,5 +87,6 @@ export type CurrentUser = {
   email: string;
   displayName: string;
   baseCurrency: string;
+  iban?: string | null;
   role: string;
 };

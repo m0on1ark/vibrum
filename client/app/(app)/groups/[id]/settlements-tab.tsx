@@ -6,10 +6,14 @@ import type { SettlementTransfer } from "@/lib/groups/types";
 import { formatMoney } from "@/lib/shared/format";
 import { cn } from "@/lib/utils";
 
+import { SettlementPaymentDialog } from "./settlement-payment-dialog";
+
 export function SettlementsTab({
+  groupId,
   settlements,
   currentUserId,
 }: {
+  groupId: number;
   settlements: SettlementTransfer[];
   currentUserId: number;
 }) {
@@ -56,15 +60,20 @@ export function SettlementsTab({
                   : `${transfer.fromDisplayName} oddaje użytkownikowi ${transfer.toDisplayName}`}
             </p>
           </div>
-          <span
-            className={cn(
-              "text-lg font-semibold",
-              iOwe && "text-destructive",
-              owedToMe && "text-emerald-600",
-            )}
-          >
-            {formatMoney(transfer.amount, "PLN")}
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            {iOwe ? (
+              <SettlementPaymentDialog groupId={groupId} transfer={transfer} />
+            ) : null}
+            <span
+              className={cn(
+                "text-lg font-semibold",
+                iOwe && "text-destructive",
+                owedToMe && "text-emerald-600",
+              )}
+            >
+              {formatMoney(transfer.amount, "PLN")}
+            </span>
+          </div>
         </CardContent>
       </Card>
     );

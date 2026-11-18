@@ -30,6 +30,9 @@ public class User extends BaseEntity {
     @Column(name = "base_currency", nullable = false, length = 3)
     private String baseCurrency = "PLN";
 
+    @Column(length = 34)
+    private String iban;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private UserRole role = UserRole.USER;

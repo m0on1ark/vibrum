@@ -8,6 +8,7 @@ public record UpdateProfileRequest(
         @Size(max = 100) @Pattern(regexp = ".*\\S.*", message = "must not be blank") String displayName,
         @Pattern(regexp = "[A-Za-z]{3}", message = "must be a 3-letter currency code") String baseCurrency,
         @Email @Size(max = 255) String email,
+        @Size(max = 50) String iban,
         String currentPassword
 ) {
 }

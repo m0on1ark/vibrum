@@ -15,6 +15,7 @@ import {
   type BudgetSummary,
 } from "@/lib/budgets/types";
 import type { Category } from "@/lib/categories/types";
+import { getUserBaseCurrencyContext } from "@/lib/currencies/get-base-currency";
 import { getJson } from "@/lib/shared/get-json";
 
 import { BudgetList } from "./budget-list";
@@ -64,11 +65,12 @@ async function BudgetsContent({
   const selectedMonth = parseBudgetMonth(rawParams.month) ?? currentMonth;
   const monthParam = toMonthStartDate(selectedMonth);
 
-  const [summaries, categories] = await Promise.all([
+  const [summaries, categories, baseCurrencyCtx] = await Promise.all([
     getJson<BudgetSummary[]>(
       `${API_PATHS.budgets.summary}?month=${encodeURIComponent(monthParam)}`,
     ),
     getJson<Category[]>(API_PATHS.categories.root),
+    getUserBaseCurrencyContext(),
   ]);
 
   if (!summaries) return <LoadError subject="budgets" />;
@@ -106,6 +108,7 @@ async function BudgetsContent({
         expenseCategories={expenseCategories}
         selectedMonth={selectedMonth}
         currentMonth={currentMonth}
+        baseCurrencyCtx={baseCurrencyCtx}
       />
     </div>
   );

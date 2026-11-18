@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { LoadError } from "@/components/load-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_PATHS } from "@/constants/api-paths";
+import { getUserBaseCurrencyContext } from "@/lib/currencies/get-base-currency";
 import { getJson } from "@/lib/shared/get-json";
 import type {
   Subscription,
@@ -36,14 +37,21 @@ export default function SubscriptionsPage() {
 }
 
 async function SubscriptionsContent() {
-  const [subscriptions, totals] = await Promise.all([
+  const [subscriptions, totals, baseCurrencyCtx] = await Promise.all([
     getJson<Subscription[]>(API_PATHS.subscriptions.root),
     getJson<SubscriptionTotal[]>(API_PATHS.subscriptions.summary),
+    getUserBaseCurrencyContext(),
   ]);
 
   if (!subscriptions || !totals) {
     return <LoadError subject="subscriptions" />;
   }
 
-  return <SubscriptionList subscriptions={subscriptions} totals={totals} />;
+  return (
+    <SubscriptionList
+      subscriptions={subscriptions}
+      totals={totals}
+      baseCurrencyCtx={baseCurrencyCtx}
+    />
+  );
 }

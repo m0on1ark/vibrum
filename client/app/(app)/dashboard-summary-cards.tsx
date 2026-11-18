@@ -11,12 +11,15 @@ import {
 } from "@/components/ui/card";
 import { API_PATHS } from "@/constants/api-paths";
 import {
-  ANALYTICS_CURRENCY,
   type AnalyticsSummary,
   parseAnalyticsMonth,
 } from "@/lib/analytics/types";
 import { currentYearMonth, formatYearMonth } from "@/lib/budgets/types";
-import { formatMoney } from "@/lib/shared/format";
+import {
+  formatOriginalPln,
+  formatPrimaryFromPln,
+} from "@/lib/currencies/base-currency";
+import { getUserBaseCurrencyContext } from "@/lib/currencies/get-base-currency";
 import { getJson } from "@/lib/shared/get-json";
 import { cn } from "@/lib/utils";
 
@@ -35,12 +38,18 @@ export async function DashboardSummaryCards({
   const params = await searchParams;
   const month = parseAnalyticsMonth(params.month) ?? currentYearMonth();
 
-  const summary = await getJson<AnalyticsSummary>(
-    `${API_PATHS.analytics.summary}?month=${encodeURIComponent(month)}`,
-  );
+  const [summary, baseCurrencyCtx] = await Promise.all([
+    getJson<AnalyticsSummary>(
+      `${API_PATHS.analytics.summary}?month=${encodeURIComponent(month)}`,
+    ),
+    getUserBaseCurrencyContext(),
+  ]);
   if (!summary) return <LoadError subject="analytics summary" />;
 
   const changePercent = summary.expensesChangePercent;
+  const incomeOrig = formatOriginalPln(summary.income, baseCurrencyCtx);
+  const expensesOrig = formatOriginalPln(summary.expenses, baseCurrencyCtx);
+  const balanceOrig = formatOriginalPln(summary.balance, baseCurrencyCtx);
 
   return (
     <section
@@ -51,8 +60,13 @@ export async function DashboardSummaryCards({
         <CardHeader>
           <CardDescription>Przychody</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-            {formatMoney(summary.income, ANALYTICS_CURRENCY)}
+            {formatPrimaryFromPln(summary.income, baseCurrencyCtx)}
           </CardTitle>
+          {incomeOrig ? (
+            <p className="text-xs tabular-nums text-muted-foreground">
+              {incomeOrig}
+            </p>
+          ) : null}
         </CardHeader>
         <CardContent>
           <p className="text-xs capitalize text-muted-foreground">
@@ -65,8 +79,13 @@ export async function DashboardSummaryCards({
         <CardHeader>
           <CardDescription>Wydatki</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums">
-            {formatMoney(summary.expenses, ANALYTICS_CURRENCY)}
+            {formatPrimaryFromPln(summary.expenses, baseCurrencyCtx)}
           </CardTitle>
+          {expensesOrig ? (
+            <p className="text-xs tabular-nums text-muted-foreground">
+              {expensesOrig}
+            </p>
+          ) : null}
         </CardHeader>
         <CardContent>
           {changePercent !== null ? (
@@ -90,13 +109,16 @@ export async function DashboardSummaryCards({
               </span>
               <span>
                 vs poprzedni miesiąc (
-                {formatMoney(summary.previousMonthExpenses, ANALYTICS_CURRENCY)}
+                {formatPrimaryFromPln(
+                  summary.previousMonthExpenses,
+                  baseCurrencyCtx,
+                )}
                 )
               </span>
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Poprzedni miesiąc: {formatMoney(0, ANALYTICS_CURRENCY)}
+              Poprzedni miesiąc: {formatPrimaryFromPln(0, baseCurrencyCtx)}
             </p>
           )}
         </CardContent>
@@ -113,13 +135,24 @@ export async function DashboardSummaryCards({
                 : "text-destructive",
             )}
           >
-            {formatMoney(summary.balance, ANALYTICS_CURRENCY)}
+            {formatPrimaryFromPln(summary.balance, baseCurrencyCtx)}
           </CardTitle>
+          {balanceOrig ? (
+            <p className="text-xs tabular-nums text-muted-foreground">
+              {balanceOrig}
+            </p>
+          ) : null}
         </CardHeader>
-        <CardContent>
+        <CardContent className="grid gap-1">
           <p className="text-xs text-muted-foreground">
             Przychody minus wydatki
           </p>
+          {baseCurrencyCtx.baseCurrency !== "PLN" ? (
+            <p className="text-xs tabular-nums text-muted-foreground">
+              Kurs NBP: 1 {baseCurrencyCtx.baseCurrency} ={" "}
+              {baseCurrencyCtx.rateToPln.toFixed(4)} PLN
+            </p>
+          ) : null}
         </CardContent>
       </Card>
     </section>

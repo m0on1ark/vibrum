@@ -7,18 +7,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { type BudgetStatus, type BudgetSummary } from "@/lib/budgets/types";
 import {
-  BUDGET_CURRENCY,
-  type BudgetStatus,
-  type BudgetSummary,
-} from "@/lib/budgets/types";
-import { formatMoney } from "@/lib/shared/format";
+  type BaseCurrencyContext,
+  DEFAULT_BASE_CURRENCY_CTX,
+  formatOriginalPln,
+  formatPrimaryFromPln,
+} from "@/lib/currencies/base-currency";
 import { pluralPl } from "@/lib/shared/plural";
 import { cn } from "@/lib/utils";
 
 import { BudgetProgressBar, computeUsagePercent } from "./budget-progress-bar";
 
-export function BudgetOverview({ summaries }: { summaries: BudgetSummary[] }) {
+export function BudgetOverview({
+  summaries,
+  baseCurrencyCtx = DEFAULT_BASE_CURRENCY_CTX,
+}: {
+  summaries: BudgetSummary[];
+  baseCurrencyCtx?: BaseCurrencyContext;
+}) {
   const totalLimit = summaries.reduce((sum, item) => sum + item.limitAmount, 0);
   const totalSpent = summaries.reduce((sum, item) => sum + item.spentAmount, 0);
   const totalProjected = summaries.reduce(
@@ -27,6 +34,13 @@ export function BudgetOverview({ summaries }: { summaries: BudgetSummary[] }) {
   );
   const remaining = totalLimit - totalSpent;
   const percent = computeUsagePercent(totalSpent, totalLimit);
+
+  const totalLimitOrig = formatOriginalPln(totalLimit, baseCurrencyCtx);
+  const totalSpentOrig = formatOriginalPln(totalSpent, baseCurrencyCtx);
+  const remainingOrig = formatOriginalPln(
+    Math.abs(remaining),
+    baseCurrencyCtx,
+  );
 
   const overallStatus: BudgetStatus =
     totalSpent > totalLimit
@@ -46,8 +60,13 @@ export function BudgetOverview({ summaries }: { summaries: BudgetSummary[] }) {
           </CardHeader>
           <CardContent className="grid gap-1">
             <p className="text-2xl font-semibold tabular-nums">
-              {formatMoney(totalLimit, BUDGET_CURRENCY)}
+              {formatPrimaryFromPln(totalLimit, baseCurrencyCtx)}
             </p>
+            {totalLimitOrig ? (
+              <p className="text-xs tabular-nums text-muted-foreground">
+                {totalLimitOrig}
+              </p>
+            ) : null}
             <CardDescription>
               {summaries.length}{" "}
               {pluralPl(
@@ -67,9 +86,16 @@ export function BudgetOverview({ summaries }: { summaries: BudgetSummary[] }) {
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2">
-            <p className="text-2xl font-semibold tabular-nums">
-              {formatMoney(totalSpent, BUDGET_CURRENCY)}
-            </p>
+            <div>
+              <p className="text-2xl font-semibold tabular-nums">
+                {formatPrimaryFromPln(totalSpent, baseCurrencyCtx)}
+              </p>
+              {totalSpentOrig ? (
+                <p className="text-xs tabular-nums text-muted-foreground">
+                  {totalSpentOrig}
+                </p>
+              ) : null}
+            </div>
             <BudgetProgressBar
               percent={percent}
               status={overallStatus}
@@ -96,10 +122,15 @@ export function BudgetOverview({ summaries }: { summaries: BudgetSummary[] }) {
                   : "text-destructive",
               )}
             >
-              {formatMoney(Math.abs(remaining), BUDGET_CURRENCY)}
+              {formatPrimaryFromPln(Math.abs(remaining), baseCurrencyCtx)}
             </p>
+            {remainingOrig ? (
+              <p className="text-xs tabular-nums text-muted-foreground">
+                {remainingOrig}
+              </p>
+            ) : null}
             <CardDescription>
-              Prognoza: {formatMoney(totalProjected, BUDGET_CURRENCY)}
+              Prognoza: {formatPrimaryFromPln(totalProjected, baseCurrencyCtx)}
             </CardDescription>
           </CardContent>
         </Card>

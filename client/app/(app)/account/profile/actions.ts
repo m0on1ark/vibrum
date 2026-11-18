@@ -19,7 +19,14 @@ export async function updateProfileAction(
   const res = await callApi(API_PATHS.users.me, {
     method: "PATCH",
     body: parsed.data,
-    revalidate: [APP_PATHS.profile, APP_PATHS.home],
+    revalidate: [
+      APP_PATHS.profile,
+      APP_PATHS.home,
+      APP_PATHS.transactions,
+      APP_PATHS.budgets,
+      APP_PATHS.accounts,
+      APP_PATHS.subscriptions,
+    ],
   });
 
   return { error: res.ok ? null : res.error };

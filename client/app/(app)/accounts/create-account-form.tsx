@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CURRENCY_CODES, type CurrencyCode } from "@/constants/currencies";
 import { useFormAction } from "@/hooks/use-form-action";
 import {
   createAccountSchema,
@@ -43,22 +44,36 @@ import { createAccountAction } from "./actions";
 const BANK_OPTION_DESCRIPTIONS: Record<BankType, string> = {
   PKO_BP: "PKO BP (wyciąg CSV)",
   MBANK: "mBank (wyciąg CSV)",
-  REVOLUT: "Revolut (wyciąg JSON)",
+  REVOLUT: "Revolut (wyciąg CSV / JSON)",
   MINIBANK: "miniBank (bez importu wyciągu)",
 };
 
-const DEFAULT_VALUES: CreateAccountInput = {
-  accountName: "",
-  bankType: "PKO_BP",
-  baseCurrency: "PLN",
-};
+function resolveDefaultCurrency(code?: string): CurrencyCode {
+  const normalized = code?.trim().toUpperCase();
+  if (
+    normalized &&
+    (CURRENCY_CODES as readonly string[]).includes(normalized)
+  ) {
+    return normalized as CurrencyCode;
+  }
+  return "PLN";
+}
 
-export function CreateAccountForm() {
+export function CreateAccountForm({
+  defaultCurrency,
+}: {
+  defaultCurrency?: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const defaultValues: CreateAccountInput = {
+    accountName: "",
+    bankType: "PKO_BP",
+    baseCurrency: resolveDefaultCurrency(defaultCurrency),
+  };
   const form = useForm<CreateAccountInput>({
     resolver: zodResolver(createAccountSchema),
-    defaultValues: DEFAULT_VALUES,
+    defaultValues,
   });
   const { isSubmitting } = form.formState;
 
@@ -66,7 +81,7 @@ export function CreateAccountForm() {
     createAccountAction,
     () => {
       setOpen(false);
-      form.reset(DEFAULT_VALUES);
+      form.reset(defaultValues);
       router.refresh();
     },
   );
@@ -74,7 +89,7 @@ export function CreateAccountForm() {
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
     setError(null);
-    form.reset(DEFAULT_VALUES);
+    form.reset(defaultValues);
   }
 
   return (

@@ -17,13 +17,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { API_PATHS } from "@/constants/api-paths";
-import {
-  ANALYTICS_CURRENCY,
-  type MonthlyTotals,
-  parseMonthlyRange,
-} from "@/lib/analytics/types";
+import { type MonthlyTotals, parseMonthlyRange } from "@/lib/analytics/types";
 import { formatYearMonth } from "@/lib/budgets/types";
-import { formatMoney } from "@/lib/shared/format";
+import {
+  convertFromPln,
+  formatOriginalPln,
+  formatPrimaryFromPln,
+} from "@/lib/currencies/base-currency";
+import { getUserBaseCurrencyContext } from "@/lib/currencies/get-base-currency";
 import { getJson } from "@/lib/shared/get-json";
 import { cn } from "@/lib/utils";
 
@@ -51,17 +52,20 @@ export async function DashboardMonthlyTrend({
   const params = await searchParams;
   const months = parseMonthlyRange(params.months);
 
-  const items = await getJson<MonthlyTotals[]>(
-    `${API_PATHS.analytics.monthly}?months=${months}`,
-  );
+  const [items, baseCurrencyCtx] = await Promise.all([
+    getJson<MonthlyTotals[]>(
+      `${API_PATHS.analytics.monthly}?months=${months}`,
+    ),
+    getUserBaseCurrencyContext(),
+  ]);
   if (!items) return <LoadError subject="monthly trend" />;
 
   const chartData: MonthlyChartPoint[] = items.map((item) => ({
     month: item.month,
     shortLabel: formatShortYearMonth(item.month),
     label: formatYearMonth(item.month),
-    income: item.income,
-    expenses: item.expenses,
+    income: convertFromPln(item.income, baseCurrencyCtx),
+    expenses: convertFromPln(item.expenses, baseCurrencyCtx),
   }));
 
   return (
@@ -78,7 +82,10 @@ export async function DashboardMonthlyTrend({
           </p>
         ) : (
           <div className="grid gap-6">
-            <DashboardMonthlyChart data={chartData} />
+            <DashboardMonthlyChart
+              data={chartData}
+              currency={baseCurrencyCtx.baseCurrency}
+            />
 
             <Table>
               <TableHeader>
@@ -92,6 +99,7 @@ export async function DashboardMonthlyTrend({
               <TableBody>
                 {items.map((item) => {
                   const net = item.income - item.expenses;
+                  const netOrig = formatOriginalPln(net, baseCurrencyCtx);
 
                   return (
                     <TableRow key={item.month}>
@@ -99,10 +107,10 @@ export async function DashboardMonthlyTrend({
                         {formatYearMonth(item.month)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-emerald-600 dark:text-emerald-400">
-                        {formatMoney(item.income, ANALYTICS_CURRENCY)}
+                        {formatPrimaryFromPln(item.income, baseCurrencyCtx)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-rose-600 dark:text-rose-400">
-                        {formatMoney(item.expenses, ANALYTICS_CURRENCY)}
+                        {formatPrimaryFromPln(item.expenses, baseCurrencyCtx)}
                       </TableCell>
                       <TableCell
                         className={cn(
@@ -112,7 +120,14 @@ export async function DashboardMonthlyTrend({
                             : "text-destructive",
                         )}
                       >
-                        {formatMoney(net, ANALYTICS_CURRENCY)}
+                        <div>
+                          {formatPrimaryFromPln(net, baseCurrencyCtx)}
+                        </div>
+                        {netOrig ? (
+                          <div className="text-xs font-normal text-muted-foreground">
+                            {netOrig}
+                          </div>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   );

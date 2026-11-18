@@ -12,6 +12,11 @@ import {
 import { APP_PATHS } from "@/constants";
 import { BANK_TYPE_LABELS, type BankAccount } from "@/lib/accounts/types";
 import type { Category } from "@/lib/categories/types";
+import {
+  type BaseCurrencyContext,
+  convertFromPln,
+  DEFAULT_BASE_CURRENCY_CTX,
+} from "@/lib/currencies/base-currency";
 import { formatDate, formatMoney } from "@/lib/shared/format";
 import { pluralPl } from "@/lib/shared/plural";
 import {
@@ -30,12 +35,14 @@ export function TransactionsTable({
   accounts,
   categories,
   isFiltered,
+  baseCurrencyCtx = DEFAULT_BASE_CURRENCY_CTX,
 }: {
   pageData: NormalizedPage<Transaction>;
   filters: TransactionFilters;
   accounts: BankAccount[];
   categories: Category[];
   isFiltered: boolean;
+  baseCurrencyCtx?: BaseCurrencyContext;
 }) {
   const accountById = new Map(accounts.map((account) => [account.id, account]));
 
@@ -83,6 +90,7 @@ export function TransactionsTable({
                 account={accountById.get(tx.accountId)}
                 filters={filters}
                 categories={categories}
+                baseCurrencyCtx={baseCurrencyCtx}
               />
             ))}
           </TableBody>
@@ -152,14 +160,27 @@ function TransactionRow({
   account,
   filters,
   categories,
+  baseCurrencyCtx,
 }: {
   tx: Transaction;
   account: BankAccount | undefined;
   filters: TransactionFilters;
   categories: Category[];
+  baseCurrencyCtx: BaseCurrencyContext;
 }) {
   const showRecipient =
     tx.recipient && tx.recipient.trim() !== tx.title.trim();
+  const isSameAsBase = tx.currency === baseCurrencyCtx.baseCurrency;
+  const convertedAmount = convertFromPln(tx.amountInPln, baseCurrencyCtx);
+  const primaryDisplay = isSameAsBase
+    ? `${tx.amount > 0 ? "+" : ""}${formatMoney(tx.amount, tx.currency)}`
+    : `${convertedAmount > 0 ? "+" : ""}${formatMoney(convertedAmount, baseCurrencyCtx.baseCurrency)}`;
+  const nbpSuffix =
+    tx.currency !== "PLN" &&
+    typeof tx.exchangeRate === "number" &&
+    tx.exchangeRate > 0
+      ? ` · kurs NBP ${tx.exchangeRate.toFixed(4)}`
+      : "";
 
   return (
     <TableRow>
@@ -209,13 +230,13 @@ function TransactionRow({
             tx.amount > 0 && "text-emerald-600",
           )}
         >
-          {tx.amount > 0 ? "+" : ""}
-          {formatMoney(tx.amount, tx.currency)}
+          {primaryDisplay}
         </div>
-        {tx.currency !== "PLN" ? (
+        {!isSameAsBase ? (
           <div className="text-xs text-muted-foreground">
-            {tx.amountInPln > 0 ? "+" : ""}
-            {formatMoney(tx.amountInPln, "PLN")}
+            orig: {tx.amount > 0 ? "+" : ""}
+            {formatMoney(tx.amount, tx.currency)}
+            {nbpSuffix}
           </div>
         ) : null}
       </TableCell>

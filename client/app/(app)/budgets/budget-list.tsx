@@ -14,6 +14,10 @@ import {
 import { useServerAction } from "@/hooks/use-server-action";
 import { formatYearMonth, type BudgetSummary } from "@/lib/budgets/types";
 import type { Category } from "@/lib/categories/types";
+import {
+  type BaseCurrencyContext,
+  DEFAULT_BASE_CURRENCY_CTX,
+} from "@/lib/currencies/base-currency";
 
 import { deleteBudgetAction } from "./actions";
 import { BudgetCard } from "./budget-card";
@@ -25,11 +29,13 @@ export function BudgetList({
   expenseCategories,
   selectedMonth,
   currentMonth,
+  baseCurrencyCtx = DEFAULT_BASE_CURRENCY_CTX,
 }: {
   summaries: BudgetSummary[];
   expenseCategories: Category[];
   selectedMonth: string;
   currentMonth: string;
+  baseCurrencyCtx?: BaseCurrencyContext;
 }) {
   const { run, pending, error } = useServerAction();
   const existingCategoryIds = summaries.map((item) => item.categoryId);
@@ -76,7 +82,7 @@ export function BudgetList({
 
   return (
     <div className="grid gap-6">
-      <BudgetOverview summaries={summaries} />
+      <BudgetOverview summaries={summaries} baseCurrencyCtx={baseCurrencyCtx} />
 
       <InlineError message={error} />
 
@@ -87,6 +93,7 @@ export function BudgetList({
             item={item}
             pending={pending}
             onDelete={handleDelete}
+            baseCurrencyCtx={baseCurrencyCtx}
           />
         ))}
       </div>
