@@ -142,92 +142,94 @@ function RulesTable({
   onDelete: (rule: CategorizationRule) => void;
 }) {
   return (
-    <div className="rounded-xl border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Wzorzec</TableHead>
-            <TableHead>Typ</TableHead>
-            <TableHead>Pole</TableHead>
-            <TableHead>Kategoria</TableHead>
-            <TableHead className="text-right">Priorytet</TableHead>
-            <TableHead className="text-right">Akcje</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rules.map((rule) => {
-            const category = categoryById.get(rule.categoryId);
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Wzorzec</TableHead>
+          <TableHead>Typ</TableHead>
+          <TableHead>Pole</TableHead>
+          <TableHead>Kategoria</TableHead>
+          <TableHead className="text-right">Priorytet</TableHead>
+          <TableHead className="text-right">Akcje</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rules.map((rule) => {
+          const category = categoryById.get(rule.categoryId);
 
-            return (
-              <TableRow key={rule.id}>
-                <TableCell className="max-w-xs whitespace-normal">
-                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs break-all">
-                    {rule.pattern}
-                  </code>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">
-                    {RULE_MATCH_TYPE_LABELS[rule.matchType]}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {RULE_TARGET_LABELS[rule.target]}
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="font-medium">{rule.categoryName}</span>
-                    {category ? (
-                      <Badge variant="outline">
-                        {CATEGORY_TYPE_LABELS[category.type]}
-                      </Badge>
-                    ) : null}
+          return (
+            <TableRow key={rule.id}>
+              <TableCell className="max-w-xs whitespace-normal">
+                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs break-all">
+                  {rule.pattern}
+                </code>
+              </TableCell>
+              <TableCell>
+                <Badge variant="secondary">
+                  {RULE_MATCH_TYPE_LABELS[rule.matchType]}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {RULE_TARGET_LABELS[rule.target]}
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-medium">{rule.categoryName}</span>
+                  {category ? (
+                    <Badge
+                      variant={
+                        category.type === "INCOME" ? "default" : "secondary"
+                      }
+                    >
+                      {CATEGORY_TYPE_LABELS[category.type]}
+                    </Badge>
+                  ) : null}
+                </div>
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {rule.priority}
+              </TableCell>
+              <TableCell className="text-right">
+                {rule.system ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <LockIcon className="size-3.5" />
+                    Tylko do odczytu
+                  </span>
+                ) : (
+                  <div className="inline-flex items-center justify-end gap-1.5">
+                    <RuleFormDialog
+                      rule={rule}
+                      categories={categories}
+                      trigger={
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={pending}
+                        >
+                          <PencilIcon className="size-3.5" />
+                          Edytuj
+                        </Button>
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={pending}
+                      onClick={() => onDelete(rule)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2Icon className="size-3.5" />
+                      Usuń
+                    </Button>
                   </div>
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {rule.priority}
-                </TableCell>
-                <TableCell className="text-right">
-                  {rule.system ? (
-                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <LockIcon className="size-3.5" />
-                      Tylko do odczytu
-                    </span>
-                  ) : (
-                    <div className="inline-flex items-center justify-end gap-1.5">
-                      <RuleFormDialog
-                        rule={rule}
-                        categories={categories}
-                        trigger={
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={pending}
-                          >
-                            <PencilIcon className="size-3.5" />
-                            Edytuj
-                          </Button>
-                        }
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled={pending}
-                        onClick={() => onDelete(rule)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2Icon className="size-3.5" />
-                        Usuń
-                      </Button>
-                    </div>
-                  )}
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+                )}
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
   );
 }

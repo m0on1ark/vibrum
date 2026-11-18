@@ -5,6 +5,8 @@ import { API_PATHS } from "@/constants/api-paths";
 import { callApi } from "@/lib/shared/call-api";
 import type { RecategorizeResult, Transaction } from "@/lib/transactions/types";
 
+const TRANSACTION_REVALIDATE_PATHS = [APP_PATHS.transactions, APP_PATHS.budgets];
+
 export async function updateTransactionCategoryAction(
   transactionId: number,
   categoryId: number | null,
@@ -20,7 +22,7 @@ export async function updateTransactionCategoryAction(
   const result = await callApi(API_PATHS.transactions.category(transactionId), {
     method: "PATCH",
     body: { categoryId },
-    revalidate: [APP_PATHS.transactions],
+    revalidate: TRANSACTION_REVALIDATE_PATHS,
   });
   if (!result.ok) return { error: result.error, transaction: null };
 
@@ -33,7 +35,7 @@ export async function recategorizeTransactionsAction(): Promise<
 > {
   const response = await callApi(API_PATHS.transactions.recategorize, {
     method: "POST",
-    revalidate: [APP_PATHS.transactions],
+    revalidate: TRANSACTION_REVALIDATE_PATHS,
   });
   if (!response.ok) return { error: response.error, result: null };
 

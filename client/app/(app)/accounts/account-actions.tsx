@@ -43,6 +43,7 @@ export function AccountActions({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [hideDeleteError, setHideDeleteError] = useState(false);
   const {
     run: runDelete,
     pending: deleting,
@@ -62,6 +63,7 @@ export function AccountActions({
   } = useFormAction(
     (values: RenameAccountInput) => renameAccountAction(accountId, values),
     () => {
+      setHideDeleteError(true);
       setOpen(false);
       router.refresh();
     },
@@ -69,6 +71,7 @@ export function AccountActions({
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
+    setHideDeleteError(true);
     if (nextOpen) {
       setRenameError(null);
       form.reset({ accountName });
@@ -83,14 +86,16 @@ export function AccountActions({
     ) {
       return;
     }
+    setHideDeleteError(false);
     runDelete(() => deleteAccountAction(accountId));
   }
 
   const inputId = `rename-account-${accountId}`;
+  const visibleDeleteError = hideDeleteError ? null : deleteError;
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      <InlineError message={deleteError} />
+      <InlineError message={visibleDeleteError} />
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>

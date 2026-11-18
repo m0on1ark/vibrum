@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { NETWORK_ERROR_MESSAGE } from "@/constants";
-import type { CategoryOption } from "@/lib/transactions/types";
+import type { Category } from "@/lib/categories/types";
 import { cn } from "@/lib/utils";
 
 import { updateTransactionCategoryAction } from "./actions";
@@ -31,21 +31,31 @@ export function TransactionCategoryCell({
   categoryId: number | null;
   categoryName: string | null;
   categoryManual: boolean;
-  categories: CategoryOption[];
+  categories: Category[];
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [optimistic, setOptimistic] = useState<{
+    forCategoryId: number | null;
+    value: string;
+  } | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const currentValue = categoryId != null ? String(categoryId) : NONE_VALUE;
+  const activeOptimistic =
+    optimistic && optimistic.forCategoryId === categoryId
+      ? optimistic.value
+      : null;
+  const currentValue =
+    activeOptimistic ?? (categoryId != null ? String(categoryId) : NONE_VALUE);
   const hasCurrentInOptions =
     categoryId == null || categories.some((item) => item.id === categoryId);
 
   function handleChange(value: string) {
+    if (value === currentValue) return;
     const nextCategoryId = value === NONE_VALUE ? null : Number(value);
-    if (nextCategoryId === categoryId) return;
 
     setError(null);
+    setOptimistic({ forCategoryId: categoryId, value });
     startTransition(async () => {
       try {
         const result = await updateTransactionCategoryAction(
@@ -53,11 +63,13 @@ export function TransactionCategoryCell({
           nextCategoryId,
         );
         if (result.error) {
+          setOptimistic(null);
           setError(result.error);
           return;
         }
         router.refresh();
       } catch {
+        setOptimistic(null);
         setError(NETWORK_ERROR_MESSAGE);
       }
     });
@@ -76,7 +88,7 @@ export function TransactionCategoryCell({
             aria-label="Kategoria transakcji"
             className={cn(
               "w-44",
-              categoryId == null && "text-muted-foreground",
+              currentValue === NONE_VALUE && "text-muted-foreground",
             )}
           >
             <SelectValue />
