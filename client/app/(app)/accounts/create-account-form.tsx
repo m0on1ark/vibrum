@@ -47,27 +47,38 @@ const BANK_OPTION_DESCRIPTIONS: Record<BankType, string> = {
   MINIBANK: "miniBank (bez importu wyciągu)",
 };
 
+const DEFAULT_VALUES: CreateAccountInput = {
+  accountName: "",
+  bankType: "PKO_BP",
+  baseCurrency: "PLN",
+};
+
 export function CreateAccountForm() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const form = useForm<CreateAccountInput>({
     resolver: zodResolver(createAccountSchema),
-    defaultValues: {
-      accountName: "",
-      bankType: "PKO_BP",
-      baseCurrency: "PLN",
-    },
+    defaultValues: DEFAULT_VALUES,
   });
   const { isSubmitting } = form.formState;
 
-  const { submit, error } = useFormAction(createAccountAction, () => {
-    setOpen(false);
-    form.reset();
-    router.refresh();
-  });
+  const { submit, error, setError } = useFormAction(
+    createAccountAction,
+    () => {
+      setOpen(false);
+      form.reset(DEFAULT_VALUES);
+      router.refresh();
+    },
+  );
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    setError(null);
+    form.reset(DEFAULT_VALUES);
+  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="lg" className="h-11 text-base">
           Dodaj konto

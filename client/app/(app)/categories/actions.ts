@@ -20,6 +20,7 @@ import { callApi } from "@/lib/shared/call-api";
 const CATEGORY_REVALIDATE_PATHS = [
   APP_PATHS.categories,
   APP_PATHS.transactions,
+  APP_PATHS.budgets,
 ];
 const RULE_REVALIDATE_PATHS = [APP_PATHS.categories];
 

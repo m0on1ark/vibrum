@@ -26,7 +26,7 @@ export async function createAccountAction(input: CreateAccountInput) {
 
   const result = await callApi(API_PATHS.accounts.root, {
     body: parsed.data,
-    revalidate: [APP_PATHS.accounts],
+    revalidate: [APP_PATHS.accounts, APP_PATHS.transactions],
   });
   if (!result.ok) return { error: result.error, account: null };
 
@@ -63,7 +63,7 @@ export async function deleteAccountAction(accountId: number) {
 
   const { error } = await callApi(API_PATHS.accounts.detail(accountId), {
     method: "DELETE",
-    revalidate: [APP_PATHS.accounts, APP_PATHS.transactions],
+    revalidate: [APP_PATHS.accounts, APP_PATHS.transactions, APP_PATHS.budgets],
   });
   return { error };
 }
@@ -104,5 +104,6 @@ export async function importStatementAction(
   const result = (await response.json()) as ImportResult;
   revalidatePath(APP_PATHS.accounts);
   revalidatePath(APP_PATHS.transactions);
+  revalidatePath(APP_PATHS.budgets);
   return { error: null, result };
 }

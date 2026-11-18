@@ -20,13 +20,6 @@ export type RecategorizeResult = {
   changedCount: number;
 };
 
-export type CategoryOption = {
-  id: number;
-  name: string;
-  type: "EXPENSE" | "INCOME";
-  system: boolean;
-};
-
 export type RawSpringPage<T> = {
   content: T[];
   number?: number;
@@ -126,8 +119,17 @@ function parseNonNegativeInt(value: string | undefined): number {
 }
 
 function parseIsoDate(value: string | undefined): string {
-  if (!value) return "";
-  return ISO_DATE_RE.test(value) ? value : "";
+  if (!value || !ISO_DATE_RE.test(value)) return "";
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return "";
+  }
+  return value;
 }
 
 export function parseTransactionSearchParams(
