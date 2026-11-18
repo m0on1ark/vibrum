@@ -10,7 +10,6 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { ANALYTICS_CURRENCY } from "@/lib/analytics/types";
 import { formatMoney } from "@/lib/shared/format";
 
 export type MonthlyChartPoint = {
@@ -37,18 +36,25 @@ const compactNumberFormatter = new Intl.NumberFormat("pl-PL", {
   maximumFractionDigits: 1,
 });
 
-function formatCompactPln(value: number): string {
-  return `${compactNumberFormatter.format(value)} zł`;
-}
-
-function formatPlnTooltipValue(value: number): string {
-  return formatMoney(value, ANALYTICS_CURRENCY);
+function formatCompactCurrency(value: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("pl-PL", {
+      style: "currency",
+      currency,
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }).format(value);
+  } catch {
+    return `${compactNumberFormatter.format(value)} ${currency}`;
+  }
 }
 
 export function DashboardMonthlyChart({
   data,
+  currency,
 }: {
   data: MonthlyChartPoint[];
+  currency: string;
 }) {
   return (
     <ChartContainer config={chartConfig} className="h-64 w-full">
@@ -61,7 +67,9 @@ export function DashboardMonthlyChart({
           tickMargin={8}
         />
         <YAxis
-          tickFormatter={formatCompactPln}
+          tickFormatter={(value: number) =>
+            formatCompactCurrency(value, currency)
+          }
           tickLine={false}
           axisLine={false}
           width={60}
@@ -69,7 +77,7 @@ export function DashboardMonthlyChart({
         <ChartTooltip
           content={
             <ChartTooltipContent
-              valueFormatter={formatPlnTooltipValue}
+              valueFormatter={(value) => formatMoney(value, currency)}
               labelFormatter={(rawLabel, payload) => {
                 const first = payload[0]?.payload as
                   | MonthlyChartPoint

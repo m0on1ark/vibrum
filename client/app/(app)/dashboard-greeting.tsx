@@ -18,8 +18,7 @@ export async function DashboardGreeting() {
           Witaj, {user.displayName}
         </h1>
         <p className="text-muted-foreground">
-          Przegląd Twoich finansów, struktury wydatków i trendów miesięcznych w
-          PLN.
+          {`Przegląd Twoich finansów, struktury wydatków i trendów miesięcznych w walucie ${user.baseCurrency}.`}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">

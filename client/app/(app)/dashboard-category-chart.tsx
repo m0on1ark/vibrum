@@ -8,10 +8,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import {
-  ANALYTICS_CURRENCY,
-  type CategorySpending,
-} from "@/lib/analytics/types";
+import { type CategorySpending } from "@/lib/analytics/types";
 import { formatMoney } from "@/lib/shared/format";
 
 type CategoryChartDatum = {
@@ -22,19 +19,20 @@ type CategoryChartDatum = {
   fill: string;
 };
 
-function formatCategoryTotal(amount: number): string {
-  return formatMoney(amount, ANALYTICS_CURRENCY);
-}
-
 export function DashboardCategoryChart({
   items,
   totalExpenses,
   colors,
+  currency,
 }: {
   items: CategorySpending[];
   totalExpenses: number;
   colors: readonly string[];
+  currency: string;
 }) {
+  const formatCategoryTotal = (amount: number): string =>
+    formatMoney(amount, currency);
+
   const chartData: CategoryChartDatum[] = items.map((item, index) => ({
     key:
       item.categoryId !== null ? `cat-${item.categoryId}` : "uncategorized",

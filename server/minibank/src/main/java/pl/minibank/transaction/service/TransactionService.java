@@ -196,6 +196,7 @@ public class TransactionService {
                 .amount(tx.getOriginalAmount())
                 .currency(tx.getOriginalCurrency())
                 .amountInPln(tx.getAmountInPln())
+                .exchangeRate(tx.getExchangeRate())
                 .title(tx.getTitle())
                 .recipient(tx.getRecipient())
                 .categoryId(tx.getCategory() != null ? tx.getCategory().getId() : null)

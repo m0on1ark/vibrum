@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { APP_PATHS } from "@/constants";
 import { API_PATHS } from "@/constants/api-paths";
 import { BANK_TYPE_LABELS, type BankAccount } from "@/lib/accounts/types";
+import { getUserBaseCurrencyContext } from "@/lib/currencies/get-base-currency";
 import { getJson } from "@/lib/shared/get-json";
 
 import { AccountActions } from "./account-actions";
@@ -23,6 +24,19 @@ import { CreateAccountForm } from "./create-account-form";
 import { ImportStatementForm } from "./import-statement-form";
 
 export default function AccountsPage() {
+  return (
+    <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+      <AccountsContent />
+    </Suspense>
+  );
+}
+
+async function AccountsContent() {
+  const [accounts, baseCurrencyCtx] = await Promise.all([
+    getJson<BankAccount[]>(API_PATHS.accounts.root),
+    getUserBaseCurrencyContext(),
+  ]);
+
   return (
     <div className="grid gap-8">
       <header className="flex flex-wrap items-start justify-between gap-4">
@@ -39,19 +53,16 @@ export default function AccountsPage() {
           <Button asChild variant="outline" size="lg" className="h-11 text-base">
             <Link href={APP_PATHS.transactions}>Wszystkie transakcje</Link>
           </Button>
-          <CreateAccountForm />
+          <CreateAccountForm defaultCurrency={baseCurrencyCtx.baseCurrency} />
         </div>
       </header>
 
-      <Suspense fallback={<Skeleton className="h-44 w-full" />}>
-        <AccountsList />
-      </Suspense>
+      <AccountsList accounts={accounts} />
     </div>
   );
 }
 
-async function AccountsList() {
-  const accounts = await getJson<BankAccount[]>(API_PATHS.accounts.root);
+function AccountsList({ accounts }: { accounts: BankAccount[] | null }) {
   if (!accounts) return <LoadError subject="accounts" />;
 
   if (accounts.length === 0) {

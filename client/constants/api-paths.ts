@@ -67,6 +67,10 @@ export const API_PATHS = {
     accept: (id: number) => `/api/invitations/${id}/accept`,
     decline: (id: number) => `/api/invitations/${id}/decline`,
   },
+  currencies: {
+    rate: (currency: string) =>
+      `/api/currencies/rate?currency=${encodeURIComponent(currency)}`,
+  },
 } as const;
 
 export function apiUrl(path: string) {

@@ -8,6 +8,7 @@ import { APP_PATHS } from "@/constants";
 import { API_PATHS } from "@/constants/api-paths";
 import type { BankAccount } from "@/lib/accounts/types";
 import type { Category } from "@/lib/categories/types";
+import { getUserBaseCurrencyContext } from "@/lib/currencies/get-base-currency";
 import { getJson } from "@/lib/shared/get-json";
 import {
   buildTransactionQuery,
@@ -65,10 +66,11 @@ async function TransactionsContent({
     ? `${API_PATHS.transactions.root}?${query}`
     : API_PATHS.transactions.root;
 
-  const [rawPage, accounts, categories] = await Promise.all([
+  const [rawPage, accounts, categories, baseCurrencyCtx] = await Promise.all([
     getJson<RawSpringPage<Transaction>>(endpoint),
     getJson<BankAccount[]>(API_PATHS.accounts.root),
     getJson<Category[]>(API_PATHS.categories.root),
+    getUserBaseCurrencyContext(),
   ]);
 
   if (!rawPage) return <LoadError subject="transactions" />;
@@ -96,6 +98,7 @@ async function TransactionsContent({
         accounts={accounts}
         categories={categories}
         isFiltered={isFiltered}
+        baseCurrencyCtx={baseCurrencyCtx}
       />
     </div>
   );

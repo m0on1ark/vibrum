@@ -108,7 +108,8 @@ export function ProfileForm({ user }: { user: CurrentUser }) {
                 }}
               />
               <FieldDescription>
-                Domyślna waluta używana na koncie.
+                Domyślna waluta dla nowych kont oraz waluta przeliczeniowa (wg
+                kursu NBP) w całym serwisie.
               </FieldDescription>
               <FieldError errors={[fieldState.error]} />
             </Field>

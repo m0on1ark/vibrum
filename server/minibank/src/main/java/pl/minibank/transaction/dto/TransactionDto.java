@@ -15,6 +15,7 @@ public class TransactionDto {
     private BigDecimal amount;
     private String currency;
     private BigDecimal amountInPln;
+    private BigDecimal exchangeRate;
     private String title;
     private String recipient;
     private Long categoryId;

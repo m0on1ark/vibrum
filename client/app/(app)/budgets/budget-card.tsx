@@ -14,7 +14,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { BUDGET_STATUS_LABELS, type BudgetSummary } from "@/lib/budgets/types";
-import { formatMoney } from "@/lib/shared/format";
+import {
+  type BaseCurrencyContext,
+  DEFAULT_BASE_CURRENCY_CTX,
+  formatOriginalPln,
+  formatPrimaryFromPln,
+} from "@/lib/currencies/base-currency";
 import { cn } from "@/lib/utils";
 
 import {
@@ -28,13 +33,17 @@ export function BudgetCard({
   item,
   pending,
   onDelete,
+  baseCurrencyCtx = DEFAULT_BASE_CURRENCY_CTX,
 }: {
   item: BudgetSummary;
   pending: boolean;
   onDelete: (item: BudgetSummary) => void;
+  baseCurrencyCtx?: BaseCurrencyContext;
 }) {
   const remaining = item.limitAmount - item.spentAmount;
   const percent = computeUsagePercent(item.spentAmount, item.limitAmount);
+  const spentOrig = formatOriginalPln(item.spentAmount, baseCurrencyCtx);
+  const limitOrig = formatOriginalPln(item.limitAmount, baseCurrencyCtx);
 
   return (
     <Card className="flex flex-col justify-between">
@@ -42,7 +51,7 @@ export function BudgetCard({
         <CardTitle>{item.categoryName}</CardTitle>
         <CardDescription>
           Wykorzystano {Math.round(percent)}% z limitu{" "}
-          {formatMoney(item.limitAmount, item.currency)}
+          {formatPrimaryFromPln(item.limitAmount, baseCurrencyCtx)}
         </CardDescription>
         <CardAction>
           <Badge className={STATUS_BADGE_CLASSES[item.status]}>
@@ -62,7 +71,12 @@ export function BudgetCard({
           <div className="grid gap-0.5">
             <dt className="text-muted-foreground">Wydano</dt>
             <dd className="font-medium tabular-nums">
-              {formatMoney(item.spentAmount, item.currency)}
+              <div>{formatPrimaryFromPln(item.spentAmount, baseCurrencyCtx)}</div>
+              {spentOrig ? (
+                <div className="text-xs font-normal text-muted-foreground">
+                  {spentOrig}
+                </div>
+              ) : null}
             </dd>
           </div>
 
@@ -78,21 +92,26 @@ export function BudgetCard({
                   : "text-destructive",
               )}
             >
-              {formatMoney(Math.abs(remaining), item.currency)}
+              {formatPrimaryFromPln(Math.abs(remaining), baseCurrencyCtx)}
             </dd>
           </div>
 
           <div className="grid gap-0.5">
             <dt className="text-muted-foreground">Limit</dt>
             <dd className="font-medium tabular-nums">
-              {formatMoney(item.limitAmount, item.currency)}
+              <div>{formatPrimaryFromPln(item.limitAmount, baseCurrencyCtx)}</div>
+              {limitOrig ? (
+                <div className="text-xs font-normal text-muted-foreground">
+                  {limitOrig}
+                </div>
+              ) : null}
             </dd>
           </div>
 
           <div className="grid gap-0.5">
             <dt className="text-muted-foreground">Prognoza na koniec mies.</dt>
             <dd className="font-medium tabular-nums">
-              {formatMoney(item.projectedAmount, item.currency)}
+              {formatPrimaryFromPln(item.projectedAmount, baseCurrencyCtx)}
             </dd>
           </div>
         </dl>
