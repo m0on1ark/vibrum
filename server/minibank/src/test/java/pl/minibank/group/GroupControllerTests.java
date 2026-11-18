@@ -536,6 +536,58 @@ class GroupControllerTests {
                 .andExpect(status().isNoContent());
     }
 
+    @Test
+    void debtorGetsTransferDetailsWithBankQrCode() throws Exception {
+        String aliceToken = register(uniqueEmail("alice"), "password123", "Alice");
+        String bobEmail = uniqueEmail("bob");
+        String bobToken = register(bobEmail, "password123", "Bob");
+        Long groupId = createGroup(aliceToken, "Pizza night");
+        addMember(aliceToken, groupId, bobEmail);
+        mockMvc.perform(post("/api/groups/" + groupId + "/expenses")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "Pizza", "amount": 100.00, "expenseDate": "2026-11-17", "splitMode": "EQUAL"}
+                                """))
+                .andExpect(status().isCreated());
+        Long aliceId = userId(aliceToken);
+        Long bobId = userId(bobToken);
+        String paymentUrl = "/api/groups/" + groupId + "/settlements/payment?toUserId=";
+
+        mockMvc.perform(get(paymentUrl + aliceId).header("Authorization", "Bearer " + bobToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.amount").value(50.0))
+                .andExpect(jsonPath("$.iban").doesNotExist())
+                .andExpect(jsonPath("$.qrPayload").doesNotExist());
+
+        mockMvc.perform(patch("/api/users/me")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"iban": "PL07 1090 1014 0000 0000 0000 0001"}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get(paymentUrl + aliceId).header("Authorization", "Bearer " + bobToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.recipientName").value("Alice"))
+                .andExpect(jsonPath("$.iban").value("PL07109010140000000000000001"))
+                .andExpect(jsonPath("$.title").value("Vibrum: Pizza night"))
+                .andExpect(jsonPath("$.qrPayload").value("|PL|07109010140000000000000001|005000|Alice|Vibrum: Pizza night|||"));
+
+        mockMvc.perform(get(paymentUrl + bobId).header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isNotFound());
+        String outsiderToken = register(uniqueEmail("eve"), "password123", "Eve");
+        mockMvc.perform(get(paymentUrl + aliceId).header("Authorization", "Bearer " + outsiderToken))
+                .andExpect(status().isNotFound());
+    }
+
+    private Long userId(String token) throws Exception {
+        String response = mockMvc.perform(get("/api/users/me").header("Authorization", "Bearer " + token))
+                .andReturn().getResponse().getContentAsString();
+        return ((Integer) JsonPath.read(response, "$.id")).longValue();
+    }
+
     private Long createGroup(String token, String name) throws Exception {
         String response = mockMvc.perform(post("/api/groups")
                         .header("Authorization", "Bearer " + token)

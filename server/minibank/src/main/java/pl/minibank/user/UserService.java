@@ -40,10 +40,24 @@ public class UserService {
         if (request.baseCurrency() != null) {
             user.setBaseCurrency(request.baseCurrency().toUpperCase(Locale.ROOT));
         }
+        if (request.iban() != null) {
+            user.setIban(validIbanOrNull(request.iban()));
+        }
         if (request.email() != null) {
             changeEmail(user, request.email().trim().toLowerCase(Locale.ROOT), request.currentPassword());
         }
         return UserResponse.from(user);
+    }
+
+    private static String validIbanOrNull(String value) {
+        if (value.isBlank()) {
+            return null;
+        }
+        String iban = Iban.normalize(value);
+        if (!Iban.isValidPolish(iban)) {
+            throw new BadRequestException("Invalid Polish IBAN");
+        }
+        return iban;
     }
 
     private void changeEmail(User user, String email, String currentPassword) {
