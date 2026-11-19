@@ -1,0 +1,38 @@
+stages:
+  - verify
+
+frontend:ci:
+  stage: verify
+  image: node:22-alpine
+  variables:
+    NEXT_TELEMETRY_DISABLED: "1"
+  cache:
+    key:
+      files:
+        - client/yarn.lock
+    paths:
+      - .yarn-cache/
+      - client/node_modules/
+  script:
+    - yarn --cwd client install --frozen-lockfile --cache-folder "$CI_PROJECT_DIR/.yarn-cache"
+    - yarn --cwd client tsc --noEmit
+    - yarn --cwd client lint
+    - yarn --cwd client test --ci
+    - NEXT_PUBLIC_API_URL=http://localhost:8080 yarn --cwd client build
+
+backend:ci:
+  stage: verify
+  image: eclipse-temurin:21-jdk
+  variables:
+    MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  cache:
+    key:
+      files:
+        - server/minibank/pom.xml
+    paths:
+      - .m2/repository/
+  script:
+    - cd server/minibank
+    - chmod +x mvnw
+    - ./mvnw -B test-compile
+    - ./mvnw -B test -Dtest=AuthServiceTests,BurnRateCalculatorTest,CategorizationEngineTests,RuleMatcherTests,JwtConfigTests,NbpCurrencyServiceIntegrationTest,SettlementCalculatorTest,SplitCalculatorTest,SubscriptionDetectorTests,MBankCsvParserTest,PkoBpCsvParserTest,RevolutParserTest
