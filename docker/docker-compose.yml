@@ -1,46 +1,25 @@
 name: minibank
 
 services:
-  postgres:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_DB: ${DB_NAME:-minibank}
-      POSTGRES_USER: ${DB_USERNAME:-minibank}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-minibank}
-    ports:
-      - "${DB_PORT:-5432}:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
   backend:
     build:
       context: ../server/minibank
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-minibank}
-      DB_USERNAME: ${DB_USERNAME:-minibank}
-      DB_PASSWORD: ${DB_PASSWORD:-minibank}
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-me-0123456789abcdef}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
-      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-mailhog}
-      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-1025}
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-smtp.gmail.com}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
       SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
       SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
-      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: ${SPRING_MAIL_SMTP_AUTH:-false}
-      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: ${SPRING_MAIL_STARTTLS:-false}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: ${SPRING_MAIL_SMTP_AUTH:-true}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: ${SPRING_MAIL_STARTTLS:-true}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
       APP_MAIL_FROM: ${APP_MAIL_FROM:-no-reply@minibank.local}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      mailhog:
-        condition: service_started
 
   frontend:
     build:
@@ -51,12 +30,3 @@ services:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
       - backend
-
-  mailhog:
-    image: mailhog/mailhog:v1.0.1
-    ports:
-      - "${MAILHOG_SMTP_PORT:-1025}:1025"
-      - "${MAILHOG_UI_PORT:-8025}:8025"
-
-volumes:
-  postgres-data:
