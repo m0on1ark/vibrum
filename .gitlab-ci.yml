@@ -1,5 +1,6 @@
 stages:
   - verify
+  - package
   - deploy
 
 frontend:ci:
@@ -36,8 +37,56 @@ backend:ci:
   script:
     - cd server/minibank
     - chmod +x mvnw
-    - ./mvnw -B test-compile
     - ./mvnw -B test -Dtest=AuthServiceTests,BurnRateCalculatorTest,CategorizationEngineTests,RuleMatcherTests,JwtConfigTests,NbpCurrencyServiceIntegrationTest,SettlementCalculatorTest,SplitCalculatorTest,SubscriptionDetectorTests,MBankCsvParserTest,PkoBpCsvParserTest,RevolutParserTest
+    - ./mvnw -B -q package -DskipTests
+  artifacts:
+    paths:
+      - server/minibank/target/*.jar
+    expire_in: 1 hour
+
+package:backend:
+  stage: package
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  needs:
+    - backend:ci
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH == "feature/ci-cd"'
+      when: manual
+  script:
+    - mkdir -p /kaniko/.docker
+    - AUTH=$(printf '%s:%s' "$ACR_USERNAME" "$ACR_PASSWORD" | base64 | tr -d '\n')
+    - printf '{"auths":{"vibrumacr2026.azurecr.io":{"auth":"%s"}}}' "$AUTH" > /kaniko/.docker/config.json
+    - |
+      cat <<'EOF' > "$CI_PROJECT_DIR/server/minibank/target/Dockerfile.ci"
+      FROM eclipse-temurin:21-jre
+      WORKDIR /app
+      COPY minibank-*.jar app.jar
+      USER 1001
+      EXPOSE 8080
+      ENTRYPOINT ["java", "-jar", "app.jar"]
+      EOF
+    - /kaniko/executor
+      --custom-platform=linux/amd64
+      --context "$CI_PROJECT_DIR/server/minibank/target"
+      --dockerfile "$CI_PROJECT_DIR/server/minibank/target/Dockerfile.ci"
+      --destination "vibrumacr2026.azurecr.io/vibrum-backend:$CI_COMMIT_SHORT_SHA"
+
+deploy:backend:
+  stage: deploy
+  image: curlimages/curl:latest
+  needs:
+    - package:backend
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH == "feature/ci-cd"'
+  script:
+    - |
+      curl -fsSL -X POST "$AZURE_DEPLOY_HOOK" \
+        -H "Content-Type: application/json" \
+        -d "{\"image\":\"vibrumacr2026.azurecr.io/vibrum-backend:$CI_COMMIT_SHORT_SHA\"}"
 
 deploy:frontend:
   stage: deploy
@@ -54,27 +103,3 @@ deploy:frontend:
     - vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
     - vercel build --prod --token="$VERCEL_TOKEN"
     - vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
-
-deploy:backend:
-  stage: deploy
-  image:
-    name: gcr.io/kaniko-project/executor:debug
-    entrypoint: [""]
-  needs:
-    - backend:ci
-  rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-    - if: '$CI_COMMIT_BRANCH == "feature/ci-cd"'
-      when: manual
-  script:
-    - mkdir -p /kaniko/.docker
-    - AUTH=$(printf '%s:%s' "$ACR_USERNAME" "$ACR_PASSWORD" | base64 | tr -d '\n')
-    - printf '{"auths":{"vibrumacr2026.azurecr.io":{"auth":"%s"}}}' "$AUTH" > /kaniko/.docker/config.json
-    - /kaniko/executor
-      --context "$CI_PROJECT_DIR/server/minibank"
-      --dockerfile "$CI_PROJECT_DIR/server/minibank/Dockerfile"
-      --destination "vibrumacr2026.azurecr.io/vibrum-backend:$CI_COMMIT_SHORT_SHA"
-    - |
-      wget -qO- --header="Content-Type: application/json" \
-        --post-data="{\"image\":\"vibrumacr2026.azurecr.io/vibrum-backend:$CI_COMMIT_SHORT_SHA\"}" \
-        "$AZURE_DEPLOY_HOOK"
