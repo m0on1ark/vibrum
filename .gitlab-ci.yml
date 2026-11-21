@@ -1,5 +1,6 @@
 stages:
   - verify
+  - deploy
 
 frontend:ci:
   stage: verify
@@ -37,3 +38,19 @@ backend:ci:
     - chmod +x mvnw
     - ./mvnw -B test-compile
     - ./mvnw -B test -Dtest=AuthServiceTests,BurnRateCalculatorTest,CategorizationEngineTests,RuleMatcherTests,JwtConfigTests,NbpCurrencyServiceIntegrationTest,SettlementCalculatorTest,SplitCalculatorTest,SubscriptionDetectorTests,MBankCsvParserTest,PkoBpCsvParserTest,RevolutParserTest
+
+deploy:frontend:
+  stage: deploy
+  image: node:22-alpine
+  needs:
+    - frontend:ci
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH == "feature/ci-cd"'
+      when: manual
+  script:
+    - npm install -g vercel
+    - cd client
+    - vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+    - vercel build --prod --token="$VERCEL_TOKEN"
+    - vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
