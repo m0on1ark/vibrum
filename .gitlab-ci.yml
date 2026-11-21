@@ -54,3 +54,27 @@ deploy:frontend:
     - vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
     - vercel build --prod --token="$VERCEL_TOKEN"
     - vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+deploy:backend:
+  stage: deploy
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  needs:
+    - backend:ci
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH == "feature/ci-cd"'
+      when: manual
+  script:
+    - mkdir -p /kaniko/.docker
+    - AUTH=$(printf '%s:%s' "$ACR_USERNAME" "$ACR_PASSWORD" | base64 | tr -d '\n')
+    - printf '{"auths":{"vibrumacr2026.azurecr.io":{"auth":"%s"}}}' "$AUTH" > /kaniko/.docker/config.json
+    - /kaniko/executor
+      --context "$CI_PROJECT_DIR/server/minibank"
+      --dockerfile "$CI_PROJECT_DIR/server/minibank/Dockerfile"
+      --destination "vibrumacr2026.azurecr.io/vibrum-backend:$CI_COMMIT_SHORT_SHA"
+    - |
+      wget -qO- --header="Content-Type: application/json" \
+        --post-data="{\"image\":\"vibrumacr2026.azurecr.io/vibrum-backend:$CI_COMMIT_SHORT_SHA\"}" \
+        "$AZURE_DEPLOY_HOOK"
